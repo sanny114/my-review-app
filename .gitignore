@@ -7,6 +7,7 @@ dist/
 
 # Vite/Firebase の秘密やローカル設定
 .env*
+!.env
 !.env.example
 
 # OS/エディタ
