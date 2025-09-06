@@ -1,15 +1,13 @@
 import App from '../App'
 import { exportJSON, importJSON, loadDB } from '../store'
 import { exportLatestStatusCSV, exportLogsCSV, exportProblemsCSV } from '../csv'
-
-// ▼ 追加：Firebase 認証の読み込み
+import { pushAllToCloud, pullAllFromCloud } from '../cloud'
 import { onAuth, signInGoogle, signOutGoogle } from '../firebase'
 import { useEffect, useState } from 'react'
 
 export default function DataIO(){
   const db = loadDB()
 
-  // ▼ 追加：ログイン状態を持つ
   const [user, setUser] = useState<null | { uid: string; name: string; email?: string }>(null)
   useEffect(() => {
     const unsub = onAuth(u => setUser(u ? { uid: u.uid, name: u.displayName || 'No Name', email: u.email || undefined } : null))
@@ -57,7 +55,7 @@ export default function DataIO(){
         <p className="muted">UTF-8(BOM付)でExcelでも文字化けしにくい形式です。</p>
       </div>
 
-      {/* ▼ 追加：Googleログイン */}
+      {/* ▼ クラウド同期（Firebase 認証） */}
       <div className="card">
         <h3>クラウド同期（Firebase 認証）</h3>
 
@@ -75,12 +73,28 @@ export default function DataIO(){
         ) : (
           <>
             <p>ログイン中：<b>{user.name}</b>（{user.email || 'メール非公開'}）</p>
-            <div className="row">
+            <div className="row" style={{gap:12, flexWrap:'wrap'}}>
+              <button className="button" onClick={async () => {
+                if (!confirm('クラウドのデータを「今の端末の内容」で全て置き換えます。続行しますか？')) return
+                await pushAllToCloud(user!.uid)
+                alert('クラウドへアップロードしました')
+              }}>
+                クラウドへアップロード
+              </button>
+
+              <button className="button secondary" onClick={async () => {
+                if (!confirm('端末のデータを「クラウドの内容」で全て置き換えます。続行しますか？')) return
+                await pullAllFromCloud(user!.uid)
+                alert('クラウドから取得しました（必要ならページを再読み込みしてください）')
+              }}>
+                クラウドから取得
+              </button>
+
               <button className="button secondary" onClick={() => signOutGoogle()}>
                 ログアウト
               </button>
             </div>
-            <p className="muted">次のステップで「クラウドへ保存／取得」ボタンを追加できます。</p>
+            <p className="muted">※ 初回はPCで「アップロード」→ スマホで「取得」の順にどうぞ。</p>
           </>
         )}
       </div>
