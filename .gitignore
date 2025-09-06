@@ -1,0 +1,14 @@
+# 追跡しないもの
+node_modules/
+dist/
+.vite/
+*.log
+.DS_Store
+
+# Vite/Firebase の秘密やローカル設定
+.env*
+!.env.example
+
+# OS/エディタ
+Thumbs.db
+.vscode/

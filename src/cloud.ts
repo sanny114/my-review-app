@@ -1,0 +1,51 @@
+// src/cloud.ts
+import { loadDB, saveDB } from './store'
+import { paths, db, stamp } from './firebase'
+import { doc, setDoc, getDocs, deleteDoc } from 'firebase/firestore'
+import type { AppDB, Problem, ReviewLog } from './types'
+
+/** ローカル → クラウド（上書き保存） */
+export const pushAllToCloud = async (uid: string) => {
+  const dbLocal = loadDB()
+  const { problems, reviewLogs } = paths(uid)
+
+  // 既存クラウドを一旦削除（安全のため本来は差分更新だが、MVPはシンプルに全入替）
+  const oldP = await getDocs(problems); for (const d of oldP.docs) await deleteDoc(d.ref)
+  const oldR = await getDocs(reviewLogs); for (const d of oldR.docs) await deleteDoc(d.ref)
+
+  // 問題
+  for (const p of dbLocal.problems) {
+    const ref = doc(problems, p.id)
+    const data = { ...p, _updatedAt: stamp() }
+    await setDoc(ref, data, { merge: true })
+  }
+  // ログ
+  for (const r of dbLocal.reviewLogs) {
+    const ref = doc(reviewLogs, r.id)
+    const data = { ...r, _updatedAt: stamp() }
+    await setDoc(ref, data, { merge: true })
+  }
+}
+
+/** クラウド → ローカル（ローカル置き換え） */
+export const pullAllFromCloud = async (uid: string) => {
+  const dbLocal: AppDB = loadDB()
+  const { problems, reviewLogs } = paths(uid)
+
+  const psSnap = await getDocs(problems)
+  const rsSnap = await getDocs(reviewLogs)
+
+  const ps: Problem[] = psSnap.docs.map(d => {
+    const { _updatedAt, ...rest } = d.data() as any
+    return rest as Problem
+  })
+  const rs: ReviewLog[] = rsSnap.docs.map(d => {
+    const { _updatedAt, ...rest } = d.data() as any
+    return rest as ReviewLog
+  })
+
+  // 置き換え（ユーザー・設定はローカルを保持）
+  dbLocal.problems = ps
+  dbLocal.reviewLogs = rs
+  saveDB(dbLocal)
+}
