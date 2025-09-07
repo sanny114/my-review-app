@@ -183,9 +183,24 @@ export const importProblemsCSV = (db: AppDB, csvText: string, defaultUserId: Use
         continue
       }
 
+      // ID生成を強化
+      let problemId = ''
+      if (csvId && csvId.trim()) {
+        problemId = csvId.trim()
+      } else {
+        problemId = uid('p_')
+      }
+      
+      // IDが空でないことを再確認
+      if (!problemId || problemId.trim() === '') {
+        problemId = uid('p_') // フォールバック
+      }
+      
+      console.log(`行${i + 1}: 生成ID="${problemId}" (元CSV ID="${csvId}")`)
+
       // 実際のデータ構造に変換
       const problem: Problem = {
-        id: csvId.trim() || uid('p_'), // 空IDは自動採番
+        id: problemId, // 強化されたID
         userId: defaultUserId,
         subjectName: subject.trim() || '未分類',
         subjectFixed: ['漢字', '算数'].includes(subject.trim()),

@@ -13,12 +13,23 @@ export const pushAllToCloud = async (uid: string) => {
   console.log(`アップロード予定問題数: ${dbLocal.problems.length}`)
   console.log(`アップロード予定ログ数: ${dbLocal.reviewLogs.length}`)
 
+  // データクリーンアップ：無効な問題を除去
+  const validProblems = dbLocal.problems.filter(p => {
+    const isValid = p.id && p.id.trim() !== '' && p.text && p.text.trim() !== '' && p.answer && p.answer.trim() !== ''
+    if (!isValid) {
+      console.warn('⚠️ 無効な問題をスキップ:', p)
+    }
+    return isValid
+  })
+  
+  console.log(`有効な問題数: ${validProblems.length}/${dbLocal.problems.length}`)
+
   // 既存クラウドを一旦削除（安全のため本来は差分更新だが、MVPはシンプルに全入替）
   const oldP = await getDocs(problems); for (const d of oldP.docs) await deleteDoc(d.ref)
   const oldR = await getDocs(reviewLogs); for (const d of oldR.docs) await deleteDoc(d.ref)
 
-  // 問題
-  for (const p of dbLocal.problems) {
+  // 問題（有効なもののみ）
+  for (const p of validProblems) {
     const ref = doc(problems, p.id)
     const data = { ...p, _updatedAt: stamp() }
     console.log(`問題アップロード: ${p.id} - "${p.text.substring(0, 30)}..."`, data)
