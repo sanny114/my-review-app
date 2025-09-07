@@ -41,17 +41,18 @@ export default function DataIO(){
       const result = importProblemsCSV(db, text, targetUserId)
       
       if (result.errors.length > 0) {
-        const errorMsg = `インポート結果:
-成功: ${result.success}件
-エラー: ${result.errors.length}件
-
-エラー詳細:
-${result.errors.slice(0, 10).join('\n')}${result.errors.length > 10 ? '
-...（他' + (result.errors.length - 10) + '件）' : ''}`
+        const errorMsg = [
+          'インポート結果:',
+          `成功: ${result.success}件`,
+          `エラー: ${result.errors.length}件`,
+          '',
+          'エラー詳細:',
+          ...result.errors.slice(0, 10),
+          result.errors.length > 10 ? `...（他${result.errors.length - 10}件）` : ''
+        ].filter(line => line !== '').join('\n')
         alert(errorMsg)
       } else {
-        alert(`CSVインポートが完了しました！
-成功: ${result.success}件`)
+        alert(`CSVインポートが完了しました！\n成功: ${result.success}件`)
       }
       
       refreshDB() // DBをリフレッシュ
