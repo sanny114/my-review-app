@@ -62,11 +62,21 @@ saveDB(db)
 }
 
 
+export const deleteProblem = (db: AppDB, pid: string) => {
+const idx = db.problems.findIndex(p => p.id === pid)
+if (idx === -1) return false
+db.problems.splice(idx, 1)
+// 関連するレビューログも削除
+  db.reviewLogs = db.reviewLogs.filter(r => r.problemId !== pid)
+  saveDB(db)
+  return true
+}
+
 export const addReviewLog = (db: AppDB, problemId: string, userId: User['id'], rating: RatingCode) => {
-const log: ReviewLog = { id: uid('r_'), problemId, userId, reviewedAt: nowIso(), rating }
-db.reviewLogs.push(log)
-saveDB(db)
-return log
+  const log: ReviewLog = { id: uid('r_'), problemId, userId, reviewedAt: nowIso(), rating }
+  db.reviewLogs.push(log)
+  saveDB(db)
+  return log
 }
 
 
