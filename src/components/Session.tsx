@@ -4,9 +4,51 @@ import { addReviewLog, loadDB } from '../store'
 import { RatingCode } from '../types'
 
 const ratingBtn: { k: RatingCode; label: string; className: string; style?: React.CSSProperties }[] = [
-  { k: 'wrong',  label: 'まちがい',           className: 'button danger' },
-  { k: 'doubt',  label: 'ちょっと自信ない',   className: 'button', style: { background: '#f59e0b', color: '#fff' } },
-  { k: 'correct',label: 'できた',             className: 'button', style: { background: '#10b981', color: '#fff' } }
+  { 
+    k: 'wrong',  
+    label: '×',           
+    className: 'button secondary', 
+    style: { 
+      fontSize: '32px', 
+      padding: '20px 40px', 
+      color: '#16a34a', 
+      backgroundColor: 'white', 
+      border: '2px solid #e5e7eb',
+      fontWeight: 'bold',
+      minWidth: '120px',
+      minHeight: '80px'
+    } 
+  },
+  { 
+    k: 'doubt',  
+    label: '△',   
+    className: 'button secondary', 
+    style: { 
+      fontSize: '32px', 
+      padding: '20px 40px', 
+      color: '#f59e0b', 
+      backgroundColor: 'white', 
+      border: '2px solid #e5e7eb',
+      fontWeight: 'bold',
+      minWidth: '120px',
+      minHeight: '80px'
+    } 
+  },
+  { 
+    k: 'correct',
+    label: '○',             
+    className: 'button secondary', 
+    style: { 
+      fontSize: '32px', 
+      padding: '20px 40px', 
+      color: '#dc2626', 
+      backgroundColor: 'white', 
+      border: '2px solid #e5e7eb',
+      fontWeight: 'bold',
+      minWidth: '120px',
+      minHeight: '80px'
+    } 
+  }
 ]
 
 export default function Session(){
@@ -117,18 +159,59 @@ export default function Session(){
             </div>
 
             {showAns && (
-              <div className="row" style={{ marginTop: 12, gap: 12 }}>
-                {ratingBtn.map(b => (
-                  <button
-                    key={b.k}
-                    className={b.className}
-                    style={b.style}
-                    onClick={() => onRate(b.k)}
-                  >
-                    {b.label}
-                  </button>
-                ))}
-                <button className="button secondary" onClick={() => setShowAns(false)}>もう一度この問題</button>
+              <div style={{ 
+                marginTop: 24, 
+                display: 'flex', 
+                flexDirection: 'column', 
+                gap: 16, 
+                alignItems: 'center'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  gap: 16,
+                  flexWrap: 'wrap',
+                  justifyContent: 'center'
+                }}>
+                  {ratingBtn.map(b => (
+                    <button
+                      key={b.k}
+                      className={b.className}
+                      style={{
+                        ...b.style,
+                        transition: 'all 0.2s ease',
+                        cursor: 'pointer'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'scale(1.05)'
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'scale(1)'
+                        e.currentTarget.style.boxShadow = 'none'
+                      }}
+                      onTouchStart={(e) => {
+                        e.currentTarget.style.transform = 'scale(0.95)'
+                      }}
+                      onTouchEnd={(e) => {
+                        e.currentTarget.style.transform = 'scale(1)'
+                      }}
+                      onClick={() => onRate(b.k)}
+                    >
+                      {b.label}
+                    </button>
+                  ))}
+                </div>
+                <button 
+                  className="button secondary" 
+                  style={{
+                    fontSize: '16px',
+                    padding: '12px 24px',
+                    marginTop: '8px'
+                  }}
+                  onClick={() => setShowAns(false)}
+                >
+                  もう一度この問題
+                </button>
               </div>
             )}
           </div>
