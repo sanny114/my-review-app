@@ -9,6 +9,10 @@ export const pushAllToCloud = async (uid: string) => {
   const dbLocal = loadDB()
   const { problems, reviewLogs } = paths(uid)
 
+  console.log('=== クラウドアップロード開始 ===')
+  console.log(`アップロード予定問題数: ${dbLocal.problems.length}`)
+  console.log(`アップロード予定ログ数: ${dbLocal.reviewLogs.length}`)
+
   // 既存クラウドを一旦削除（安全のため本来は差分更新だが、MVPはシンプルに全入替）
   const oldP = await getDocs(problems); for (const d of oldP.docs) await deleteDoc(d.ref)
   const oldR = await getDocs(reviewLogs); for (const d of oldR.docs) await deleteDoc(d.ref)
@@ -17,6 +21,7 @@ export const pushAllToCloud = async (uid: string) => {
   for (const p of dbLocal.problems) {
     const ref = doc(problems, p.id)
     const data = { ...p, _updatedAt: stamp() }
+    console.log(`問題アップロード: ${p.id} - "${p.text.substring(0, 30)}..."`, data)
     await setDoc(ref, data, { merge: true })
   }
   // ログ
@@ -25,6 +30,8 @@ export const pushAllToCloud = async (uid: string) => {
     const data = { ...r, _updatedAt: stamp() }
     await setDoc(ref, data, { merge: true })
   }
+  
+  console.log('✅ クラウドアップロード完了')
 }
 
 /** クラウド → ローカル（ローカル置き換え） */

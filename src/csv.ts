@@ -108,12 +108,21 @@ dl(`Problems_LatestStatus_${who}_${Date.now()}.csv`, header + rows.join('\r\n'))
 
 // CSVインポート機能
 export const importProblemsCSV = (db: AppDB, csvText: string, defaultUserId: User['id'] = 'rin'): { success: number, errors: string[] } => {
+  // デバッグ情報を追加
+  console.log('=== CSVインポート開始 ===')
+  console.log('CSV文字数:', csvText.length)
+  console.log('CSV最初の200文字:', csvText.substring(0, 200))
+  
   const lines = csvText.split(/\r?\n/).filter(line => line.trim())
+  console.log('行数（空行除く）:', lines.length)
+  
   if (lines.length === 0) {
     return { success: 0, errors: ['CSVファイルが空です'] }
   }
 
   const header = lines[0].toLowerCase()
+  console.log('ヘッダー行:', header)
+  
   const errors: string[] = []
   let success = 0
 
@@ -158,8 +167,11 @@ export const importProblemsCSV = (db: AppDB, csvText: string, defaultUserId: Use
   for (let i = 1; i < lines.length; i++) {
     try {
       const fields = parseCSVLine(lines[i])
+      console.log(`行${i + 1}: フィールド数=${fields.length}, 内容=[${fields.map(f => `"${f.substring(0, 30)}..."`).join(', ')}]`)
+      
       if (fields.length < 5) {
-        errors.push(`行${i + 1}: フィールド数が不足しています`)
+        errors.push(`行${i + 1}: フィールド数が不足しています（${fields.length}個、最低5個必要）`)
+        console.log(`行${i + 1} エラー: フィールド数不足 - 元の行: "${lines[i]}"`)
         continue
       }
 
@@ -180,10 +192,11 @@ export const importProblemsCSV = (db: AppDB, csvText: string, defaultUserId: Use
         text: question.trim(),
         answer: answer.trim(),
         tags: unit ? unit.split(';').map(t => t.trim()).filter(t => t) : [],
-        source: '',
-        memo: note ? note.trim() : '',
+        source: note && note.trim() ? note.trim() : undefined,  // 空なら undefined
+        memo: undefined,  // CSVでは memo は使わない
         createdAt: nowIso(),
-        updatedAt: nowIso()
+        updatedAt: nowIso(),
+        archived: false  // 明示的に false を設定
       }
 
       // 重複チェック
@@ -209,10 +222,15 @@ export const importProblemsCSV = (db: AppDB, csvText: string, defaultUserId: Use
       }
 
       success++
+      console.log(`行${i + 1}: 成功 - 問題「${problem.text.substring(0, 30)}...」`)
     } catch (err) {
       errors.push(`行${i + 1}: ${(err as Error).message}`)
+      console.log(`行${i + 1} 例外エラー:`, err)
     }
   }
+
+  console.log('=== CSVインポート完了 ===')
+  console.log(`成功: ${success}件, エラー: ${errors.length}件`)
 
   if (success > 0) {
     saveDB(db)
