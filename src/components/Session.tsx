@@ -3,40 +3,11 @@ import App from '../App'
 import { addReviewLog, loadDB } from '../store'
 import { RatingCode } from '../types'
 
-const ratingBtn: { k: RatingCode; label: string; className: string; style?: React.CSSProperties }[] = [
-  { 
-    k: 'wrong',  
-    label: '×',           
-    className: 'button secondary', 
-    style: { 
-      fontSize: '32px', 
-      padding: '20px 40px', 
-      color: '#16a34a', 
-      backgroundColor: 'white', 
-      border: '2px solid #e5e7eb',
-      fontWeight: 'bold',
-      minWidth: '120px',
-      minHeight: '80px'
-    } 
-  },
-  { 
-    k: 'doubt',  
-    label: '△',   
-    className: 'button secondary', 
-    style: { 
-      fontSize: '32px', 
-      padding: '20px 40px', 
-      color: '#f59e0b', 
-      backgroundColor: 'white', 
-      border: '2px solid #e5e7eb',
-      fontWeight: 'bold',
-      minWidth: '120px',
-      minHeight: '80px'
-    } 
-  },
+const ratingBtn: { k: RatingCode; label: string; text: string; className: string; style?: React.CSSProperties }[] = [
   { 
     k: 'correct',
-    label: '○',             
+    label: '○',
+    text: 'できた！',             
     className: 'button secondary', 
     style: { 
       fontSize: '32px', 
@@ -46,7 +17,54 @@ const ratingBtn: { k: RatingCode; label: string; className: string; style?: Reac
       border: '2px solid #e5e7eb',
       fontWeight: 'bold',
       minWidth: '120px',
-      minHeight: '80px'
+      minHeight: '100px',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: '8px'
+    } 
+  },
+  { 
+    k: 'doubt',  
+    label: '△',
+    text: '自信ない',   
+    className: 'button secondary', 
+    style: { 
+      fontSize: '32px', 
+      padding: '20px 40px', 
+      color: '#f59e0b', 
+      backgroundColor: 'white', 
+      border: '2px solid #e5e7eb',
+      fontWeight: 'bold',
+      minWidth: '120px',
+      minHeight: '100px',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: '8px'
+    } 
+  },
+  { 
+    k: 'wrong',  
+    label: '×',
+    text: 'まちがった',           
+    className: 'button secondary', 
+    style: { 
+      fontSize: '32px', 
+      padding: '20px 40px', 
+      color: '#16a34a', 
+      backgroundColor: 'white', 
+      border: '2px solid #e5e7eb',
+      fontWeight: 'bold',
+      minWidth: '120px',
+      minHeight: '100px',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: '8px'
     } 
   }
 ]
@@ -197,7 +215,8 @@ export default function Session(){
                       }}
                       onClick={() => onRate(b.k)}
                     >
-                      {b.label}
+                      <div style={{ fontSize: '32px', lineHeight: '1' }}>{b.label}</div>
+                      <div style={{ fontSize: '14px', fontWeight: 'normal', lineHeight: '1' }}>{b.text}</div>
                     </button>
                   ))}
                 </div>
