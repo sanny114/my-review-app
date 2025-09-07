@@ -12,9 +12,13 @@ const [subject, setSubject] = useState('')
 const [q, setQ] = useState('')
 const [editingId, setEditingId] = useState<string | null>(null)
 const [editForm, setEditForm] = useState<Partial<Problem>>({})
+const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
 // DBをリフレッシュする関数
-const refreshDB = () => setDB(loadDB())
+const refreshDB = () => {
+  setDB(loadDB())
+  setSelectedIds(new Set()) // 選択をクリア
+}
 
 const items = useMemo(()=>{
 let arr = db.problems.filter(p=>p.userId===userId && !p.archived)
@@ -25,6 +29,15 @@ arr = arr.filter(p=> (p.text+p.answer+(p.source||'')+(p.memo||'')).toLowerCase()
 }
 return arr
 },[db, userId, subject, q])
+
+// フィルタが変わったら選択をクリア
+useMemo(() => {
+const currentItemIds = new Set(items.map(p => p.id))
+const newSelected = new Set(Array.from(selectedIds).filter(id => currentItemIds.has(id)))
+if (newSelected.size !== selectedIds.size) {
+setSelectedIds(newSelected)
+}
+}, [items, selectedIds])
 
 // 編集開始
 const startEdit = (problem: Problem) => {
@@ -70,6 +83,52 @@ setEditingId(null)
 setEditForm({})
 }
 
+// 個別選択のトグル
+const toggleSelection = (problemId: string) => {
+const newSelected = new Set(selectedIds)
+if (newSelected.has(problemId)) {
+newSelected.delete(problemId)
+} else {
+newSelected.add(problemId)
+}
+setSelectedIds(newSelected)
+}
+
+// 全選択/全解除
+const toggleAllSelection = () => {
+if (selectedIds.size === items.length && items.length > 0) {
+// 全て選択済みの場合は全解除
+setSelectedIds(new Set())
+} else {
+// 一部または未選択の場合は全選択
+setSelectedIds(new Set(items.map(p => p.id)))
+}
+}
+
+// 一括削除
+const handleBulkDelete = () => {
+if (selectedIds.size === 0) {
+alert('削除する問題を選択してください')
+return
+}
+
+const selectedProblems = items.filter(p => selectedIds.has(p.id))
+const problemTexts = selectedProblems.map(p => `・${p.text.slice(0, 30)}...`).slice(0, 5)
+const displayText = problemTexts.join('\n') + (selectedProblems.length > 5 ? `\n...(他${selectedProblems.length - 5}件)` : '')
+
+if (!confirm(`${selectedIds.size}件の問題を削除しますか？\n\n${displayText}`)) return
+
+let successCount = 0
+for (const problemId of selectedIds) {
+if (deleteProblem(db, problemId)) {
+successCount++
+}
+}
+
+refreshDB()
+alert(`${successCount}件の問題を削除しました`)
+}
+
 // 削除
 const handleDelete = (problem: Problem) => {
 if (!confirm(`問題「${problem.text.slice(0, 30)}...」を削除しますか？`)) return
@@ -101,6 +160,37 @@ return (
 <label>検索</label>
 <input className="input" value={q} onChange={e=>setQ(e.target.value)} placeholder="キーワード" />
 </div>
+
+{/* 選択状態と一括操作 */}
+{items.length > 0 && (
+<div style={{marginTop: '12px', padding: '8px', backgroundColor: '#f8f9fa', borderRadius: '4px', border: '1px solid #dee2e6'}}>
+<div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px'}}>
+<div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+<span style={{fontSize: '14px', color: '#6c757d'}}>
+📊 {items.length}件中 {selectedIds.size}件選択中
+</span>
+{selectedIds.size > 0 && (
+<button 
+className="button"
+style={{fontSize: '12px', padding: '4px 8px', backgroundColor: '#dc3545', borderColor: '#dc3545'}}
+onClick={handleBulkDelete}
+disabled={editingId !== null}
+>
+🗑️ {selectedIds.size}件を一括削除
+</button>
+)}
+</div>
+<button 
+className="button secondary"
+style={{fontSize: '12px', padding: '4px 8px'}}
+onClick={toggleAllSelection}
+disabled={editingId !== null}
+>
+{selectedIds.size === items.length && items.length > 0 ? '全解除' : '全選択'}
+</button>
+</div>
+</div>
+)}
 </div>
 
 
@@ -108,6 +198,20 @@ return (
 <table className="table">
 <thead>
 <tr>
+<th style={{width: '40px'}}>
+<input 
+type="checkbox" 
+checked={items.length > 0 && selectedIds.size === items.length}
+ref={checkboxRef => {
+if (checkboxRef) {
+checkboxRef.indeterminate = selectedIds.size > 0 && selectedIds.size < items.length
+}
+}}
+onChange={toggleAllSelection}
+disabled={editingId !== null}
+title={selectedIds.size === items.length ? '全解除' : '全選択'}
+/>
+</th>
 <th>科目</th>
 <th>問題文</th>
 <th>正答</th>
@@ -120,8 +224,18 @@ return (
 <tbody>
 {items.map(p=> {
 const isEditing = editingId === p.id
+const isSelected = selectedIds.has(p.id)
 return (
-<tr key={p.id} style={isEditing ? {backgroundColor: '#f0f8ff'} : {}}>
+<tr key={p.id} style={isEditing ? {backgroundColor: '#f0f8ff'} : isSelected ? {backgroundColor: '#fff3cd'} : {}}>
+{/* チェックボックス */}
+<td>
+<input 
+type="checkbox" 
+checked={isSelected}
+onChange={() => toggleSelection(p.id)}
+disabled={editingId !== null}
+/>
+</td>
 {/* 科目 */}
 <td>
 {isEditing ? (
@@ -250,6 +364,13 @@ disabled={editingId !== null}
 <div style={{marginTop: '12px', padding: '8px', backgroundColor: '#e7f3ff', borderRadius: '4px'}}>
 <small>
 💡 <strong>編集中:</strong> 問題文と答えは必須です。他の項目は空欄でもOKです。
+</small>
+</div>
+)}
+{selectedIds.size > 0 && !editingId && (
+<div style={{marginTop: '12px', padding: '8px', backgroundColor: '#fff3cd', borderRadius: '4px', border: '1px solid #ffc107'}}>
+<small>
+✅ <strong>{selectedIds.size}件選択中:</strong> 上の「一括削除」ボタンでまとめて削除できます。
 </small>
 </div>
 )}
