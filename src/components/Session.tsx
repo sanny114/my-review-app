@@ -90,6 +90,50 @@ export default function Session(){
     )
   }, [db, userId, subjectFilter, tagFilter])
 
+  // 問題をランダム＆間違い優先でソート
+  const shuffleArray = (array: any[]) => {
+    const shuffled = [...array]
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+    }
+    return shuffled
+  }
+
+  const getSortedProblems = () => {
+    // 各問題の間違い回数を計算
+    const problemsWithScore = problems.map(problem => {
+      const logs = db.reviewLogs.filter(log => 
+        log.problemId === problem.id && log.userId === userId
+      )
+      const wrongCount = logs.filter(log => log.rating === 'wrong').length
+      const doubtCount = logs.filter(log => log.rating === 'doubt').length
+      
+      // スコア計算: 間違い×2 + 不安×1
+      const score = wrongCount * 2 + doubtCount * 1
+      
+      return { ...problem, score, wrongCount, doubtCount }
+    })
+
+    // スコア別にグループ化
+    const scoreGroups = new Map()
+    problemsWithScore.forEach(problem => {
+      const score = problem.score
+      if (!scoreGroups.has(score)) {
+        scoreGroups.set(score, [])
+      }
+      scoreGroups.get(score).push(problem)
+    })
+
+    // 各スコアグループ内でランダムシャッフル
+    const shuffledGroups = Array.from(scoreGroups.entries())
+      .sort(([a], [b]) => b - a) // スコア高い順（間違い多い順）
+      .map(([score, problems]) => shuffleArray(problems))
+      .flat()
+
+    return shuffledGroups.map(p => p.id)
+  }
+
   // 復習セッション開始
   const startReviewSession = () => {
     if (problems.length === 0) {
@@ -97,9 +141,9 @@ export default function Session(){
       return
     }
     
-    const problemIds = problems.map(p => p.id)
-    setSessionProblems(problemIds)
-    setQueue(problemIds)
+    const sortedProblemIds = getSortedProblems()
+    setSessionProblems(sortedProblemIds)
+    setQueue(sortedProblemIds)
     setIdx(0)
     setShowAns(false)
     setMode('review')
@@ -195,6 +239,35 @@ export default function Session(){
               <div style={{ marginBottom: 16, color: '#666' }}>
                 対象問題数: <strong>{problems.length}件</strong>
               </div>
+              
+              {/* デバッグ情報表示 */}
+              {problems.length > 0 && (
+                <details style={{ marginBottom: 16, textAlign: 'left', fontSize: '12px' }}>
+                  <summary style={{ cursor: 'pointer', color: '#666' }}>📊 問題順序プレビュー</summary>
+                  <div style={{ maxHeight: '150px', overflowY: 'auto', marginTop: 8, background: '#f8fafc', padding: 8, borderRadius: 4 }}>
+                    {getSortedProblems().slice(0, 10).map((problemId, index) => {
+                      const problem = db.problems.find(p => p.id === problemId)
+                      const logs = db.reviewLogs.filter(log => log.problemId === problemId && log.userId === userId)
+                      const wrongCount = logs.filter(log => log.rating === 'wrong').length
+                      const doubtCount = logs.filter(log => log.rating === 'doubt').length
+                      const score = wrongCount * 2 + doubtCount * 1
+                      
+                      return (
+                        <div key={problemId} style={{ marginBottom: 4 }}>
+                          <span style={{ color: '#3b82f6', fontWeight: 'bold' }}>{index + 1}.</span> 
+                          <span style={{ color: score > 0 ? '#ef4444' : '#666' }}>
+                            [{score > 0 ? `スコア${score}` : '新規'}]
+                          </span> 
+                          {problem?.text.slice(0, 20)}{problem?.text.length > 20 ? '...' : ''}
+                        </div>
+                      )
+                    })}
+                    {problems.length > 10 && (
+                      <div style={{ color: '#666', fontStyle: 'italic' }}>...他{problems.length - 10}件</div>
+                    )}
+                  </div>
+                </details>
+              )}
               {problems.length > 0 ? (
                 <button 
                   className="button" 
@@ -209,7 +282,7 @@ export default function Session(){
                   }}
                   onClick={startReviewSession}
                 >
-                  📚 復習をはじめる
+                  🎲 ランダム復習をはじめる
                 </button>
               ) : (
                 <p style={{ color: '#f59e0b' }}>条件に合う問題がありません。<br/>フィルタを見直してください。</p>
