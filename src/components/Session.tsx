@@ -258,7 +258,7 @@ export default function Session(){
                           <span style={{ color: score > 0 ? '#ef4444' : '#666' }}>
                             [{score > 0 ? `スコア${score}` : '新規'}]
                           </span> 
-                          {problem?.text.slice(0, 20)}{problem?.text.length > 20 ? '...' : ''}
+                          {problem?.text.slice(0, 20)}{(problem?.text.length || 0) > 20 ? '...' : ''}
                         </div>
                       )
                     })}
