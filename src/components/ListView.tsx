@@ -1,34 +1,31 @@
 import App from '../App'
-import { loadDB, updateProblem, deleteProblem } from '../store'
 import { useMemo, useState } from 'react'
 import { formatJST } from '../utils'
 import { Problem } from '../types'
+import { useRealtimeStore } from '../stores/RealtimeStore'
 
 
 export default function ListView(){
-const [db, setDB] = useState(loadDB())
-const [userId, setUserId] = useState<'rin'|'yui'>('rin')
-const [subject, setSubject] = useState('')
-const [q, setQ] = useState('')
-const [editingId, setEditingId] = useState<string | null>(null)
-const [editForm, setEditForm] = useState<Partial<Problem>>({})
-const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  // リアルタイムストアを使用
+  const realtimeStore = useRealtimeStore()
+  
+  const [userId, setUserId] = useState<'rin'|'yui'>('rin')
+  const [subject, setSubject] = useState('')
+  const [q, setQ] = useState('')
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editForm, setEditForm] = useState<Partial<Problem>>({})
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
-// DBをリフレッシュする関数
-const refreshDB = () => {
-  setDB(loadDB())
-  setSelectedIds(new Set()) // 選択をクリア
-}
-
-const items = useMemo(()=>{
-let arr = db.problems.filter(p=>p.userId===userId && !p.archived)
-if (subject) arr = arr.filter(p=>p.subjectName===subject)
-if (q) {
-const k = q.toLowerCase()
-arr = arr.filter(p=> (p.text+p.answer+(p.source||'')+(p.memo||'')).toLowerCase().includes(k))
-}
-return arr
-},[db, userId, subject, q])
+  // DBを使用せず、リアルタイムストアから直接データを取得
+  const items = useMemo(()=>{
+    let arr = realtimeStore.problems.filter(p=>p.userId===userId && !p.archived)
+    if (subject) arr = arr.filter(p=>p.subjectName===subject)
+    if (q) {
+      const k = q.toLowerCase()
+      arr = arr.filter(p=> (p.text+p.answer+(p.source||'')+(p.memo||'')).toLowerCase().includes(k))
+    }
+    return arr
+  },[realtimeStore.problems, userId, subject, q]) // リアルタイムデータを依存に
 
 // フィルタが変わったら選択をクリア
 useMemo(() => {
@@ -53,28 +50,43 @@ memo: problem.memo
 }
 
 // 編集保存
-const saveEdit = () => {
-if (!editingId || !editForm.text?.trim() || !editForm.answer?.trim()) {
-alert('問題文と答えは必須です')
-return
-}
+const saveEdit = async () => {
+  if (!editingId || !editForm.text?.trim() || !editForm.answer?.trim()) {
+    alert('問題文と答えは必須です')
+    return
+  }
 
-// データ更新
-const patch: Partial<Problem> = {
-subjectName: editForm.subjectName?.trim() || '未分類',
-subjectFixed: ['漢字', '算数'].includes(editForm.subjectName?.trim() || ''),
-text: editForm.text.trim(),
-answer: editForm.answer.trim(),
-tags: editForm.tags || [],
-source: editForm.source?.trim() || undefined,
-memo: editForm.memo?.trim() || undefined
-}
+  if (!realtimeStore.user) {
+    alert('更新にはログインが必要です')
+    return
+  }
 
-updateProblem(db, editingId, patch)
-refreshDB()
-setEditingId(null)
-setEditForm({})
-alert('保存しました')
+  try {
+    // データ更新
+    const patch: Partial<Problem> = {
+      subjectName: editForm.subjectName?.trim() || '未分類',
+      subjectFixed: ['漢字', '算数'].includes(editForm.subjectName?.trim() || ''),
+      text: editForm.text.trim(),
+      answer: editForm.answer.trim(),
+      tags: editForm.tags || [],
+    }
+    
+    // undefined を避けるため、値がある場合のみフィールドを追加
+    if (editForm.source?.trim()) {
+      patch.source = editForm.source.trim()
+    }
+    if (editForm.memo?.trim()) {
+      patch.memo = editForm.memo.trim()
+    }
+
+    await realtimeStore.updateProblem(editingId, patch)
+    setEditingId(null)
+    setEditForm({})
+    alert('保存しました')
+  } catch (error) {
+    console.error('Failed to update problem:', error)
+    alert('更新に失敗しました。ネットワークを確認してください。')
+  }
 }
 
 // 編集キャンセル
@@ -106,39 +118,53 @@ setSelectedIds(new Set(items.map(p => p.id)))
 }
 
 // 一括削除
-const handleBulkDelete = () => {
-if (selectedIds.size === 0) {
-alert('削除する問題を選択してください')
-return
-}
+const handleBulkDelete = async () => {
+  if (selectedIds.size === 0) {
+    alert('削除する問題を選択してください')
+    return
+  }
 
-const selectedProblems = items.filter(p => selectedIds.has(p.id))
-const problemTexts = selectedProblems.map(p => `・${p.text.slice(0, 30)}...`).slice(0, 5)
-const displayText = problemTexts.join('\n') + (selectedProblems.length > 5 ? `\n...(他${selectedProblems.length - 5}件)` : '')
+  if (!realtimeStore.user) {
+    alert('削除にはログインが必要です')
+    return
+  }
 
-if (!confirm(`${selectedIds.size}件の問題を削除しますか？\n\n${displayText}`)) return
+  const selectedProblems = items.filter(p => selectedIds.has(p.id))
+  const problemTexts = selectedProblems.map(p => `・${p.text.slice(0, 30)}...`).slice(0, 5)
+  const displayText = problemTexts.join('\n') + (selectedProblems.length > 5 ? `\n...(他${selectedProblems.length - 5}件)` : '')
 
-let successCount = 0
-for (const problemId of selectedIds) {
-if (deleteProblem(db, problemId)) {
-successCount++
-}
-}
+  if (!confirm(`${selectedIds.size}件の問題を削除しますか？\n\n${displayText}`)) return
 
-refreshDB()
-alert(`${successCount}件の問題を削除しました`)
+  let successCount = 0
+  for (const problemId of selectedIds) {
+    try {
+      await realtimeStore.deleteProblem(problemId)
+      successCount++
+    } catch (error) {
+      console.error('Failed to delete problem:', error)
+    }
+  }
+
+  setSelectedIds(new Set())
+  alert(`${successCount}件の問題を削除しました`)
 }
 
 // 削除
-const handleDelete = (problem: Problem) => {
-if (!confirm(`問題「${problem.text.slice(0, 30)}...」を削除しますか？`)) return
+const handleDelete = async (problem: Problem) => {
+  if (!confirm(`問題「${problem.text.slice(0, 30)}...」を削除しますか？`)) return
 
-if (deleteProblem(db, problem.id)) {
-refreshDB()
-alert('削除しました')
-} else {
-alert('削除に失敗しました')
-}
+  if (!realtimeStore.user) {
+    alert('削除にはログインが必要です')
+    return
+  }
+
+  try {
+    await realtimeStore.deleteProblem(problem.id)
+    alert('削除しました')
+  } catch (error) {
+    console.error('Failed to delete problem:', error)
+    alert('削除に失敗しました。ネットワークを確認してください。')
+  }
 }
 
 
@@ -155,7 +181,7 @@ return (
 <label>科目</label>
 <select className="input" value={subject} onChange={e=>setSubject(e.target.value)}>
 <option value="">（すべて）</option>
-{Array.from(new Set(db.problems.filter(p=>p.userId===userId).map(p=>p.subjectName))).map(s=> <option key={s} value={s}>{s}</option>)}
+{Array.from(new Set(realtimeStore.problems.filter(p=>p.userId===userId).map(p=>p.subjectName))).map(s=> <option key={s} value={s}>{s}</option>)}
 </select>
 <label>検索</label>
 <input className="input" value={q} onChange={e=>setQ(e.target.value)} placeholder="キーワード" />
