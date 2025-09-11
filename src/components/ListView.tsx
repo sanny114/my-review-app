@@ -169,8 +169,9 @@ const handleBulkDelete = async () => {
         await realtimeStore.deleteProblem(problemId)
       } else if (dataSource === 'local') {
         // ローカルStorageのみ
-        const { deleteProblem } = await import('../store')
-        deleteProblem(problemId)
+        const { deleteProblem, loadDB, saveDB } = await import('../store')
+        const currentDB = loadDB()
+        deleteProblem(currentDB, problemId)
       } else {
         // 両方から削除
         try {
@@ -182,8 +183,9 @@ const handleBulkDelete = async () => {
         }
         
         try {
-          const { deleteProblem } = await import('../store')
-          deleteProblem(problemId)
+          const { deleteProblem, loadDB } = await import('../store')
+          const currentDB = loadDB()
+          deleteProblem(currentDB, problemId)
         } catch (error) {
           console.warn(`ローカルからの削除失敗 (${problemId}):`, error)
         }
@@ -213,8 +215,9 @@ const handleDelete = async (problem: Problem) => {
       await realtimeStore.deleteProblem(problem.id)
     } else if (dataSource === 'local') {
       // ローカルStorageのみ
-      const { deleteProblem } = await import('../store')
-      deleteProblem(problem.id)
+      const { deleteProblem, loadDB } = await import('../store')
+      const currentDB = loadDB()
+      deleteProblem(currentDB, problem.id)
     } else {
       // 両方から削除（安全のため）
       try {
@@ -228,8 +231,9 @@ const handleDelete = async (problem: Problem) => {
       
       try {
         // ローカルからも削除
-        const { deleteProblem } = await import('../store')
-        deleteProblem(problem.id)
+        const { deleteProblem, loadDB } = await import('../store')
+        const currentDB = loadDB()
+        deleteProblem(currentDB, problem.id)
       } catch (error) {
         console.warn('ローカルからの削除失敗:', error)
       }
