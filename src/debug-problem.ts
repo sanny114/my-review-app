@@ -1,5 +1,5 @@
 // デバッグ用の問題登録機能
-import { useRealtimeStore } from '../stores/RealtimeStore'
+import { useRealtimeStore } from './stores/RealtimeStore'
 
 export const debugAddProblem = async () => {
   const realtimeStore = useRealtimeStore()
@@ -31,6 +31,7 @@ export const debugAddProblem = async () => {
     alert('テスト問題の追加に成功しました！')
   } catch (error) {
     console.error('❌ テスト問題の追加失敗:', error)
-    alert('エラー: ' + error.message)
+    const message = error instanceof Error ? error.message : String(error)
+    alert('エラー: ' + message)
   }
 }

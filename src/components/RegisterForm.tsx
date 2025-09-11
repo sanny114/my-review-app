@@ -75,7 +75,8 @@ const [state, setState] = useState<FormState>({
       setState(s=>({...s, text:'', answer:'', tagsInput:'', source:'', memo:''}))
     } catch (error) {
       console.error('Failed to save problem:', error)
-      alert('問題の保存に失敗しました。ネットワークを確認してください。')
+      const message = error instanceof Error ? error.message : String(error)
+      alert('問題の保存に失敗しました: ' + message)
     }
   }
 
@@ -141,7 +142,8 @@ const [state, setState] = useState<FormState>({
                   alert('✅ デバッグテスト成功！問題が追加されました。')
                 } catch (error) {
                   console.error('❌ デバッグ：テスト問題の追加失敗:', error)
-                  alert('❌ デバッグテスト失敗: ' + error.message)
+                  const message = error instanceof Error ? error.message : String(error)
+                  alert('❌ デバッグテスト失敗: ' + message)
                 }
               }}
             >
