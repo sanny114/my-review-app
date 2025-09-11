@@ -247,64 +247,6 @@ const handleDelete = async (problem: Problem) => {
 return (
 <App>
 <h2>問題一覧</h2>
-
-{/* ✅ データソース選択機能を追加 */}
-<div className="card" style={{marginBottom: 16, backgroundColor: '#f8f9fa', border: '2px solid #dee2e6'}}>
-  <h4>🔍 データソース選択</h4>
-  <div style={{display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', marginBottom: 12}}>
-    <label style={{display: 'flex', alignItems: 'center', gap: 8}}>
-      <input 
-        type="radio" 
-        checked={dataSource === 'realtime'} 
-        onChange={() => setDataSource('realtime')}
-      />
-      <span style={{fontWeight: dataSource === 'realtime' ? 'bold' : 'normal'}}>
-        🚀 リアルタイムデータ ({realtimeStore.problems.filter(p=>p.userId===userId && !p.archived).length}件)
-      </span>
-    </label>
-    <label style={{display: 'flex', alignItems: 'center', gap: 8}}>
-      <input 
-        type="radio" 
-        checked={dataSource === 'local'} 
-        onChange={() => setDataSource('local')}
-      />
-      <span style={{fontWeight: dataSource === 'local' ? 'bold' : 'normal'}}>
-        💾 ローカルStorage ({localDB.problems.filter(p=>p.userId===userId && !p.archived).length}件)
-      </span>
-    </label>
-    <label style={{display: 'flex', alignItems: 'center', gap: 8}}>
-      <input 
-        type="radio" 
-        checked={dataSource === 'both'} 
-        onChange={() => setDataSource('both')}
-      />
-      <span style={{fontWeight: dataSource === 'both' ? 'bold' : 'normal'}}>
-        📊 統合表示 ({items.length}件)
-      </span>
-    </label>
-  </div>
-  
-  {/* 警告メッセージ */}
-  {dataSource !== 'realtime' && localDB.problems.length > 0 && (
-    <div style={{padding: 12, backgroundColor: '#fff3cd', borderRadius: 4, border: '1px solid #ffc107'}}>
-      <strong>⚠️ 注意:</strong> ローカルStorageに古いデータが残っています。
-      <br />
-      <small>
-        リアルタイム同期に移行後、ローカルデータは「データ入出力」ページから削除することを推奨します。
-      </small>
-    </div>
-  )}
-  
-  {/* 推奨アクション */}
-  {dataSource === 'local' && (
-    <div style={{padding: 12, backgroundColor: '#e7f3ff', borderRadius: 4, border: '1px solid #3b82f6'}}>
-      <strong>💡 推奨:</strong> ローカルデータの削除を推奨します。
-      <br />
-      <small>「統合表示」で削除することで、リアルタイムとローカル両方から安全に削除できます。</small>
-    </div>
-  )}
-</div>
-
 <div className="card">
 <div className="row">
 <label>子ども</label>
@@ -315,10 +257,7 @@ return (
 <label>科目</label>
 <select className="input" value={subject} onChange={e=>setSubject(e.target.value)}>
 <option value="">（すべて）</option>
-{Array.from(new Set([
-  ...realtimeStore.problems.filter(p=>p.userId===userId).map(p=>p.subjectName),
-  ...(dataSource !== 'realtime' ? localDB.problems.filter(p=>p.userId===userId).map(p=>p.subjectName) : [])
-])).map(s=> <option key={s} value={s}>{s}</option>)}
+{Array.from(new Set(realtimeStore.problems.filter(p=>p.userId===userId).map(p=>p.subjectName))).map(s=> <option key={s} value={s}>{s}</option>)}
 </select>
 <label>検索</label>
 <input className="input" value={q} onChange={e=>setQ(e.target.value)} placeholder="キーワード" />

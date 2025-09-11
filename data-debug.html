@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>データデバッグツール</title>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .card { border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        .button:hover { background: #0056b3; }
+        .warning { background: #fff3cd; border: 1px solid #ffeaa7; }
+        .success { background: #d4edda; border: 1px solid #c3e6cb; }
+        .danger { background: #f8d7da; border: 1px solid #f5c6cb; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔍 データデバッグツール</h1>
+    
+    <div class="card warning">
+        <h3>⚠️ 注意</h3>
+        <p>このツールは開発者向けです。データの確認と緊急時の修正に使用してください。</p>
+    </div>
+
+    <div class="card">
+        <h3>📊 現在のデータ状況</h3>
+        <button onclick="checkDataStatus()">データ状況を確認</button>
+        <div id="dataStatus"></div>
+    </div>
+
+    <div class="card">
+        <h3>🧹 データクリーンアップ</h3>
+        <button onclick="clearLocalStorage()">ローカルStorageをクリア</button>
+        <button onclick="backupLocalStorage()">ローカルStorageをバックアップ</button>
+        <div id="cleanupStatus"></div>
+    </div>
+
+    <script>
+        function checkDataStatus() {
+            const statusDiv = document.getElementById('dataStatus');
+            let html = '<h4>データ確認結果:</h4>';
+            
+            // LocalStorage確認
+            const localData = localStorage.getItem('review-app-db-v1');
+            if (localData) {
+                try {
+                    const parsed = JSON.parse(localData);
+                    html += `<div class="warning">
+                        <strong>🗄️ LocalStorage:</strong><br>
+                        問題: ${parsed.problems?.length || 0}件<br>
+                        復習ログ: ${parsed.reviewLogs?.length || 0}件<br>
+                        <small>⚠️ LocalStorageデータが残っています</small>
+                    </div>`;
+                } catch (e) {
+                    html += `<div class="danger">❌ LocalStorageデータが破損しています</div>`;
+                }
+            } else {
+                html += `<div class="success">✅ LocalStorageはクリアされています</div>`;
+            }
+            
+            // BackupStorage確認
+            const backupData = localStorage.getItem('review-app-db-v1-backup');
+            if (backupData) {
+                try {
+                    const parsed = JSON.parse(backupData);
+                    html += `<div class="success">
+                        <strong>📦 Backup:</strong><br>
+                        問題: ${parsed.problems?.length || 0}件<br>
+                        復習ログ: ${parsed.reviewLogs?.length || 0}件<br>
+                        <small>✅ バックアップが保存されています</small>
+                    </div>`;
+                } catch (e) {
+                    html += `<div class="warning">⚠️ バックアップデータに問題があります</div>`;
+                }
+            } else {
+                html += `<div>📦 バックアップはありません</div>`;
+            }
+            
+            statusDiv.innerHTML = html;
+        }
+        
+        function clearLocalStorage() {
+            if (!confirm('LocalStorageのデータをクリアします。\n本当によろしいですか？\n\n※ リアルタイム同期に移行済みの場合は安全です')) {
+                return;
+            }
+            
+            try {
+                // バックアップを作成
+                const data = localStorage.getItem('review-app-db-v1');
+                if (data) {
+                    localStorage.setItem('review-app-db-v1-manual-backup-' + Date.now(), data);
+                }
+                
+                // LocalStorageをクリア
+                localStorage.removeItem('review-app-db-v1');
+                
+                document.getElementById('cleanupStatus').innerHTML = `
+                    <div class="success">
+                        ✅ LocalStorageをクリアしました。<br>
+                        バックアップも作成済みです。<br>
+                        <strong>ページを再読み込みしてください。</strong>
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('cleanupStatus').innerHTML = `
+                    <div class="danger">❌ エラー: ${error.message}</div>
+                `;
+            }
+        }
+        
+        function backupLocalStorage() {
+            try {
+                const data = localStorage.getItem('review-app-db-v1');
+                if (data) {
+                    const backup = JSON.parse(data);
+                    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `review-app-backup-${new Date().toISOString().split('T')[0]}.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    
+                    document.getElementById('cleanupStatus').innerHTML = `
+                        <div class="success">✅ バックアップファイルをダウンロードしました</div>
+                    `;
+                } else {
+                    document.getElementById('cleanupStatus').innerHTML = `
+                        <div class="warning">⚠️ バックアップするデータがありません</div>
+                    `;
+                }
+            } catch (error) {
+                document.getElementById('cleanupStatus').innerHTML = `
+                    <div class="danger">❌ エラー: ${error.message}</div>
+                `;
+            }
+        }
+        
+        // 初期チェック
+        window.onload = function() {
+            checkDataStatus();
+        };
+    </script>
+</body>
+</html>
