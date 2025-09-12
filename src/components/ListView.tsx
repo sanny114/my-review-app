@@ -223,11 +223,6 @@ export default function ListView(){
                 <input 
                   type="checkbox" 
                   checked={items.length > 0 && selectedIds.size === items.length}
-                  ref={checkboxRef => {
-                    if (checkboxRef) {
-                      checkboxRef.indeterminate = selectedIds.size > 0 && selectedIds.size < items.length
-                    }
-                  }}
                   onChange={toggleAllSelection}
                   disabled={editingId !== null}
                   title={selectedIds.size === items.length ? '全解除' : '全選択'}

@@ -6,7 +6,31 @@ import { loadDB } from '../store'
 export default function DataDebug() {
   const realtimeStore = useRealtimeStore()
   const [showDetails, setShowDetails] = useState(false)
-  const [analysisResult, setAnalysisResult] = useState<any>(null)
+  const [analysisResult, setAnalysisResult] = useState<{
+    firestore: {
+      total: number;
+      problems: Array<{
+        id: string;
+        originalId?: string;
+        text: string;
+        userId: string;
+      }>;
+    };
+    localStorage: {
+      total: number;
+      problems: Array<{
+        id: string;
+        text: string;
+        userId: string;
+      }>;
+    };
+    idMismatch: Array<{
+      firestoreId: string;
+      localStorageId: string;
+      text: string;
+    }>;
+    suggestions: string[];
+  } | null>(null)
   
   // LocalStorageデータを取得
   const localDB = loadDB()
@@ -37,8 +61,12 @@ export default function DataDebug() {
           userId: p.userId
         }))
       },
-      idMismatch: [],
-      suggestions: []
+      idMismatch: [] as Array<{
+        firestoreId: string;
+        localStorageId: string;
+        text: string;
+      }>,
+      suggestions: [] as string[]
     }
 
     // ID不整合をチェック
@@ -47,7 +75,7 @@ export default function DataDebug() {
         lp.text === fp.text && lp.userId === fp.userId
       )
       if (matchingLocal && matchingLocal.id !== fp.id) {
-        (analysis.idMismatch as any).push({
+        analysis.idMismatch.push({
           firestoreId: fp.id,
           localStorageId: matchingLocal.id,
           text: fp.text?.slice(0, 30) + '...'
@@ -147,7 +175,7 @@ export default function DataDebug() {
           {analysisResult.idMismatch.length > 0 && (
             <div style={{ backgroundColor: '#f8d7da', padding: '12px', borderRadius: '4px', marginBottom: '16px' }}>
               <strong>🚨 ID不整合 ({analysisResult.idMismatch.length}件):</strong>
-              {analysisResult.idMismatch.slice(0, 3).map((mismatch: any, i: number) => (
+              {analysisResult.idMismatch.slice(0, 3).map((mismatch, i: number) => (
                 <div key={i} style={{ fontSize: '12px', marginTop: '4px' }}>
                   • {mismatch.text}
                   <br />
