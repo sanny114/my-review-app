@@ -104,14 +104,27 @@ export default function DataDebug() {
     try {
       console.log('🗑️ Firestore データクリーンアップ開始')
       
-      for (const problem of realtimeStore.problems) {
-        await realtimeStore.deleteProblem(problem.id)
+      // より効率的な削除：バッチ処理
+      const totalProblems = realtimeStore.problems.length
+      const batchSize = 10
+      
+      for (let i = 0; i < totalProblems; i += batchSize) {
+        const batch = realtimeStore.problems.slice(i, i + batchSize)
+        console.log(`削除中: ${i + 1}-${Math.min(i + batchSize, totalProblems)} / ${totalProblems}`)
+        
+        // バッチ内の問題を並列削除
+        await Promise.all(
+          batch.map(problem => realtimeStore.deleteProblem(problem.id))
+        )
+        
+        // 少し待機（レート制限対策）
+        await new Promise(resolve => setTimeout(resolve, 100))
       }
       
       alert('✅ Firestoreデータを削除しました。LocalStorageから再移行できます。')
     } catch (error) {
       console.error('クリーンアップエラー:', error)
-      alert('❌ クリーンアップに失敗しました: ' + error)
+      alert('❌ クリーンアップに失敗しました: ' + error + '\n\nFirebase Console で手動削除してください。')
     }
   }
 

@@ -15,7 +15,193 @@ export default function DataIO(){
     return () => unsub()
   }, [])
 
-  // JSONエクスポート機能
+  // JSONインポート機能
+  const importFromJSON = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = async (e) => {
+      try {
+        const jsonData = JSON.parse(e.target?.result as string)
+        
+        // データ形式を検証
+        if (!jsonData.problems || !Array.isArray(jsonData.problems)) {
+          alert('❌ 無効なJSONファイルです。正しいバックアップファイルを選択してください。')
+          return
+        }
+
+        if (!realtimeStore.user) {
+          alert('❌ ログインが必要です')
+          return
+        }
+
+        if (!confirm(`${jsonData.problems.length}件の問題をインポートしますか？`)) {
+          return
+        }
+
+        let successCount = 0
+        let errorCount = 0
+
+        // 問題をインポート
+        for (const problem of jsonData.problems) {
+          try {
+            await realtimeStore.addProblem({
+              userId: problem.userId,
+              subjectName: problem.subjectName || '未分類',
+              subjectFixed: ['漢字', '算数'].includes(problem.subjectName),
+              text: problem.text,
+              answer: problem.answer,
+              tags: problem.tags || [],
+              source: problem.source || '',
+              memo: problem.memo || '',
+              archived: problem.archived || false
+            })
+            successCount++
+          } catch (error) {
+            console.error('Failed to import problem:', error)
+            errorCount++
+          }
+        }
+
+        // レビューログをインポート（存在する場合）
+        if (jsonData.reviewLogs && Array.isArray(jsonData.reviewLogs)) {
+          for (const log of jsonData.reviewLogs) {
+            try {
+              // 問題IDは新しいものに置き換わるので、レビューログは参考程度
+              console.log('Review log skipped (問題IDが変更されるため):', log)
+            } catch (error) {
+              console.error('Failed to import review log:', error)
+            }
+          }
+        }
+
+        alert(`✅ インポート完了！\n成功: ${successCount}件\n失敗: ${errorCount}件`)
+        
+        // ファイル選択をリセット
+        event.target.value = ''
+      } catch (error) {
+        console.error('JSON import error:', error)
+        alert('❌ JSONファイルの読み込みに失敗しました: ' + error)
+        event.target.value = ''
+      }
+    }
+    
+    reader.readAsText(file)
+  }
+
+  // CSVテンプレートダウンロード
+  const downloadCSVTemplate = () => {
+    const csvTemplate = [
+      'id,userId,subjectName,text,answer,tags,source,memo,status',
+      ',rin,漢字,あの漢字を書きましょう,あ,漢字練習,教科書P.10,,',
+      ',yui,算数,10+5=？,15,たし算,ドリル,,',
+      ',rin,算数,2×3=？,6,かけ算;九九,ドリル,,',
+    ].join('\n')
+    
+    const blob = new Blob([csvTemplate], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = '問題登録テンプレート.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  // CSVインポート機能
+  const importFromCSV = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = async (e) => {
+      try {
+        const csvData = e.target?.result as string
+        
+        // CSV解析（簡単なパース）
+        const lines = csvData.split('\n').filter(line => line.trim())
+        if (lines.length < 2) {
+          alert('❌ CSVファイルが無効です。ヘッダー行とデータ行が必要です。')
+          return
+        }
+
+        const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''))
+        const expectedHeaders = ['id', 'userId', 'subjectName', 'text', 'answer', 'tags', 'source', 'memo', 'status']
+        
+        // ヘッダーチェック（柔軟に）
+        const hasRequiredHeaders = ['userId', 'text', 'answer'].every(required => 
+          headers.some(h => h.includes(required))
+        )
+        
+        if (!hasRequiredHeaders) {
+          alert('❌ CSVファイルに必要なヘッダー（userId, text, answer）が見つかりません。')
+          return
+        }
+
+        if (!realtimeStore.user) {
+          alert('❌ ログインが必要です')
+          return
+        }
+
+        if (!confirm(`${lines.length - 1}行のデータをインポートしますか？`)) {
+          return
+        }
+
+        let successCount = 0
+        let errorCount = 0
+
+        // データ行を処理
+        for (let i = 1; i < lines.length; i++) {
+          try {
+            const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''))
+            const rowData: any = {}
+            
+            headers.forEach((header, index) => {
+              rowData[header] = values[index] || ''
+            })
+
+            // 必須フィールドチェック
+            if (!rowData.text || !rowData.answer || !rowData.userId) {
+              console.warn(`行 ${i + 1}: 必須フィールドが不足`, rowData)
+              errorCount++
+              continue
+            }
+
+            // タグを配列に変換
+            const tags = rowData.tags ? rowData.tags.split(';').map((t: string) => t.trim()).filter((t: string) => t) : []
+
+            await realtimeStore.addProblem({
+              userId: rowData.userId,
+              subjectName: rowData.subjectName || '未分類',
+              subjectFixed: ['漢字', '算数'].includes(rowData.subjectName),
+              text: rowData.text,
+              answer: rowData.answer,
+              tags: tags,
+              source: rowData.source || '',
+              memo: rowData.memo || '',
+              archived: false
+            })
+            
+            successCount++
+          } catch (error) {
+            console.error(`行 ${i + 1} の処理エラー:`, error)
+            errorCount++
+          }
+        }
+
+        alert(`✅ CSVインポート完了！\n成功: ${successCount}件\n失敗: ${errorCount}件`)
+        
+        // ファイル選択をリセット
+        event.target.value = ''
+      } catch (error) {
+        console.error('CSV import error:', error)
+        alert('❌ CSVファイルの読み込みに失敗しました: ' + error)
+        event.target.value = ''
+      }
+    }
+    
+    reader.readAsText(file)
+  }
   const exportToJSON = () => {
     const exportData = {
       version: '1.0.0',
@@ -157,7 +343,74 @@ export default function DataIO(){
               </div>
             </div>
             
-            {/* バックアップ機能 */}
+            {/* データインポート機能 */}
+            <div style={{ marginBottom: 16, padding: 12, backgroundColor: '#f0f8f0', borderRadius: 4, border: '1px solid #28a745' }}>
+              <h4>📁 データインポート</h4>
+              <p>バックアップファイルからデータを復元します。</p>
+              
+              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                {/* JSONインポート */}
+                <label className="button" style={{
+                  backgroundColor: '#28a745',
+                  color: 'white',
+                  padding: '12px 24px',
+                  fontSize: '16px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'inline-block'
+                }}>
+                  📄 JSONファイルをインポート
+                  <input 
+                    type="file" 
+                    accept=".json" 
+                    onChange={importFromJSON}
+                    style={{ display: 'none' }}
+                  />
+                </label>
+                
+                {/* CSVインポート */}
+                <label className="button" style={{
+                  backgroundColor: '#17a2b8',
+                  color: 'white',
+                  padding: '12px 24px',
+                  fontSize: '16px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'inline-block'
+                }}>
+                  📈 CSVファイルをインポート
+                  <input 
+                    type="file" 
+                    accept=".csv" 
+                    onChange={importFromCSV}
+                    style={{ display: 'none' }}
+                  />
+                </label>
+                
+                {/* CSVテンプレートダウンロード */}
+                <button 
+                  className="button secondary"
+                  onClick={downloadCSVTemplate}
+                  style={{
+                    padding: '12px 24px',
+                    fontSize: '16px',
+                    backgroundColor: '#6c757d',
+                    color: 'white',
+                    border: 'none'
+                  }}
+                >
+                  📋 CSVテンプレートダウンロード
+                </button>
+              </div>
+              
+              <div style={{ fontSize: '14px', color: '#666', lineHeight: '1.4' }}>
+                <div><strong>JSON:</strong> アプリのバックアップファイルを復元</div>
+                <div><strong>CSV:</strong> Excelやスプレッドシートから作成したファイルをインポート</div>
+                <div><strong>テンプレート:</strong> CSV作成用のサンプルファイルをダウンロード</div>
+              </div>
+            </div>
+            
+            {/* データエクスポート機能 */}
             <div style={{ marginBottom: 16, padding: 12, backgroundColor: '#e7f3ff', borderRadius: 4 }}>
               <h4>💾 データバックアップ</h4>
               <p>現在のすべてのデータをJSONファイルとしてダウンロードします。</p>
@@ -228,7 +481,9 @@ export default function DataIO(){
           <h4>🎯 基本的な流れ</h4>
           <ol>
             <li><strong>上記でGoogleログイン</strong>を完了</li>
-            <li><strong>「問題を登録」</strong>で問題を追加</li>
+            <li><strong>方法A: 手動登録</strong> - 「問題を登録」で問題を追加</li>
+            <li><strong>方法B: バックアップ復元</strong> - 上記「JSONファイルをインポート」で復元</li>
+            <li><strong>方法C: CSV一括登録</strong> - テンプレートをダウンロードしてExcelで編集後インポート</li>
             <li><strong>「復習する」</strong>で学習実行</li>
             <li><strong>「問題一覧」</strong>で管理・編集</li>
           </ol>
@@ -246,7 +501,29 @@ export default function DataIO(){
             <li>問題の編集・削除でエラーが出る場合：<strong>「🧩 データクリーンアップ」</strong>を実行</li>
             <li>データが表示されない場合：<strong>ページを再読み込み</strong></li>
             <li>同期が遅い場合：<strong>ネットワーク接続を確認</strong></li>
+            <li>データを失った場合：<strong>バックアップJSONファイルから復元</strong></li>
           </ul>
+          
+          <h4>📈 CSVインポートの使い方</h4>
+          <ol>
+            <li><strong>「📋 CSVテンプレートダウンロード」</strong>をクリック</li>
+            <li>ダウンロードした<strong>「問題登録テンプレート.csv」</strong>をExcelで開く</li>
+            <li>サンプル行を参考に、新しい問題を追加</li>
+            <li>保存後、<strong>「📈 CSVファイルをインポート」</strong>でアップロード</li>
+          </ol>
+          
+          <div style={{ backgroundColor: '#e7f3ff', padding: '8px', borderRadius: '4px', marginTop: '12px' }}>
+            <small>
+              <strong>📝 CSV形式説明：</strong><br />
+              ・ <strong>userId:</strong> rin または yui<br />
+              ・ <strong>subjectName:</strong> 漢字、算数、理科など<br />
+              ・ <strong>text:</strong> 問題文<br />
+              ・ <strong>answer:</strong> 正答<br />
+              ・ <strong>tags:</strong> タグを「;」で区切って記入<br />
+              ・ <strong>source:</strong> 出典（空欄OK）<br />
+              ・ <strong>memo:</strong> メモ（空欄OK）
+            </small>
+          </div>
         </div>
       </div>
     </App>
