@@ -15,7 +15,35 @@ export default function DataIO(){
     return () => unsub()
   }, [])
 
-  // 重複データクリーンアップ
+  // JSONエクスポート機能
+  const exportToJSON = () => {
+    const exportData = {
+      version: '1.0.0',
+      exportedAt: new Date().toISOString(),
+      users: [
+        { id: 'rin', name: 'りん' },
+        { id: 'yui', name: 'ゆい' }
+      ],
+      problems: realtimeStore.problems,
+      reviewLogs: realtimeStore.reviewLogs,
+      appSettings: {
+        fixedSubjects: ['漢字', '算数'],
+        defaultReviewOptions: {
+          repeatMistakes: true,
+          repeatWithinSession: true
+        },
+        defaultSortOrder: 'newest'
+      }
+    }
+    
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `復習アプリ_バックアップ_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
   const cleanupDuplicates = async () => {
     if (!realtimeStore.user) {
       alert('ログインが必要です')
@@ -127,6 +155,26 @@ export default function DataIO(){
                 問題数: {realtimeStore.problems.length}件 | 
                 復習ログ: {realtimeStore.reviewLogs.length}件
               </div>
+            </div>
+            
+            {/* バックアップ機能 */}
+            <div style={{ marginBottom: 16, padding: 12, backgroundColor: '#e7f3ff', borderRadius: 4 }}>
+              <h4>💾 データバックアップ</h4>
+              <p>現在のすべてのデータをJSONファイルとしてダウンロードします。</p>
+              <button 
+                className="button"
+                style={{
+                  backgroundColor: '#0ea5e9',
+                  color: 'white',
+                  padding: '12px 24px',
+                  fontSize: '16px',
+                  border: 'none'
+                }}
+                onClick={exportToJSON}
+              >
+                💾 JSONバックアップをダウンロード
+              </button>
+              <p className="muted" style={{ marginTop: 8 }}>※ 問題{realtimeStore.problems.length}件、復習ログ{realtimeStore.reviewLogs.length}件をエクスポート</p>
             </div>
             
             {/* クリーンアップ機能 */}
