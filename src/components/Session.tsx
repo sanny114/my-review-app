@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState } from 'react'
 import App from '../App'
 import { RatingCode } from '../types'
 import { useRealtimeStore } from '../stores/RealtimeStore'
@@ -70,52 +70,29 @@ const ratingBtn: { k: RatingCode; label: string; text: string; className: string
 ]
 
 export default function Session(){
-  // リアルタイムストアを使用
   const realtimeStore = useRealtimeStore()
   
   const [userId, setUserId] = useState<'rin'|'yui'>('rin')
   const [subjectFilter, setSubjectFilter] = useState<string>('')
   const [tagFilter, setTagFilter] = useState<string>('')
-  
-  // 設定はデフォルト値を使用
   const [repeatMistakes, setRepeatMistakes] = useState(true)
   const [repeatWithin, setRepeatWithin] = useState(true)
-  
-  // 画面モード管理
   const [mode, setMode] = useState<'setup' | 'review'>('setup')
   const [sessionProblems, setSessionProblems] = useState<string[]>([])
-
-  // リアルタイムデータの変更を監視
-  useEffect(() => {
-    console.log('🔄 Realtime Store データ変更:', {
-      problemsCount: realtimeStore.problems.length,
-      reviewLogsCount: realtimeStore.reviewLogs.length,
-      user: realtimeStore.user?.email || 'not logged in',
-      isLoading: realtimeStore.isLoading
-    })
-  }, [realtimeStore.problems, realtimeStore.reviewLogs, realtimeStore.user, realtimeStore.isLoading])
+  const [queue, setQueue] = useState<string[]>([])
+  const [idx, setIdx] = useState(0)
+  const [showAns, setShowAns] = useState(false)
 
   const problems = useMemo(()=>{
-    console.log('📋 Problems 再計算:', {
-      realtimeProblemsCount: realtimeStore.problems.length,
-      userId,
-      subjectFilter,
-      tagFilter
-    })
-    
-    // リアルタイムストアから直接データを取得
     const filtered = realtimeStore.problems.filter(p =>
       p.userId === userId &&
       !p.archived &&
       (!subjectFilter || p.subjectName === subjectFilter) &&
       (!tagFilter || (p.tags || []).includes(tagFilter))
     )
-    
-    console.log('📋 Filtered 結果:', filtered.length)
     return filtered
-  }, [realtimeStore.problems, userId, subjectFilter, tagFilter]) // リアルタイムデータを依存に
+  }, [realtimeStore.problems, userId, subjectFilter, tagFilter])
 
-  // 問題をランダム＆間違い優先でソート
   const shuffleArray = (array: any[]) => {
     const shuffled = [...array]
     for (let i = shuffled.length - 1; i > 0; i--) {
@@ -126,27 +103,16 @@ export default function Session(){
   }
 
   const getSortedProblems = () => {
-    console.log('🔍 getSortedProblems 呼び出し:', { 
-      problemsCount: problems.length, 
-      userId, 
-      firstProblem: problems[0]?.id 
-    })
-    
-    // 各問題の間違い回数を計算
     const problemsWithScore = problems.map(problem => {
       const logs = realtimeStore.reviewLogs.filter(log => 
         log.problemId === problem.id && log.userId === userId
       )
       const wrongCount = logs.filter(log => log.rating === 'wrong').length
       const doubtCount = logs.filter(log => log.rating === 'doubt').length
-      
-      // スコア計算: 間違い×2 + 不安×1
       const score = wrongCount * 2 + doubtCount * 1
-      
       return { ...problem, score, wrongCount, doubtCount }
     })
 
-    // スコア別にグループ化
     const scoreGroups = new Map()
     problemsWithScore.forEach(problem => {
       const score = problem.score
@@ -156,23 +122,14 @@ export default function Session(){
       scoreGroups.get(score).push(problem)
     })
 
-    // 各スコアグループ内でランダムシャッフル
     const shuffledGroups = Array.from(scoreGroups.entries())
-      .sort(([a], [b]) => b - a) // スコア高い順（間違い多い順）
+      .sort(([a], [b]) => b - a)
       .map(([score, problems]) => shuffleArray(problems))
       .flat()
 
-    const result = shuffledGroups.map(p => p.id)
-    console.log('🔍 getSortedProblems 結果:', { 
-      resultCount: result.length, 
-      firstResultId: result[0],
-      scoreGroups: Array.from(scoreGroups.keys()).sort((a, b) => b - a)
-    })
-    
-    return result
+    return shuffledGroups.map(p => p.id)
   }
 
-  // 復習セッション開始
   const startReviewSession = () => {
     if (problems.length === 0) {
       alert('条件に合う問題がありません。フィルタを見直してください。')
@@ -187,7 +144,6 @@ export default function Session(){
     setMode('review')
   }
 
-  // 復習終了
   const endReviewSession = () => {
     setMode('setup')
     setSessionProblems([])
@@ -196,16 +152,11 @@ export default function Session(){
     setShowAns(false)
   }
 
-  const [queue, setQueue] = useState<string[]>([])
-  const [idx, setIdx] = useState(0)
-  const [showAns, setShowAns] = useState(false)
-
   const current = realtimeStore.problems.find(p => p.id === queue[idx])
 
   const addRepeat = (pid: string, rating: RatingCode) => {
     if (!repeatWithin) return
     if (repeatMistakes && (rating === 'wrong' || rating === 'doubt')) {
-      // 数問後に差し込む
       const insertAt = Math.min(queue.length, idx + 3)
       setQueue(q => [...q.slice(0, insertAt), pid, ...q.slice(insertAt)])
     }
@@ -214,7 +165,6 @@ export default function Session(){
   const onRate = async (r: RatingCode) => {
     if (!current) return
     
-    // リアルタイムストアに保存（自動同期）
     try {
       await realtimeStore.addReviewLog(current.id, userId, r)
     } catch (error) {
@@ -239,43 +189,8 @@ export default function Session(){
   return (
     <App>
       <h2>復習する</h2>
-      
-      {/* デバッグ情報 */}
-      <details style={{ marginBottom: 16, fontSize: '12px', background: '#f8fafc', padding: 8, borderRadius: 4 }}>
-        <summary style={{ cursor: 'pointer', color: '#666' }}>🔍 デバッグ情報</summary>
-        <div style={{ marginTop: 8 }}>
-          <div><strong>Realtime Store:</strong> 問題{realtimeStore.problems.length}件 | ログ{realtimeStore.reviewLogs.length}件</div>
-          <div><strong>Filtered Problems:</strong> {problems.length}件</div>
-          <div><strong>Authentication:</strong> {realtimeStore.user ? '✅ ログイン済み' : '❌ 未ログイン'}</div>
-          <div><strong>Loading:</strong> {realtimeStore.isLoading ? '⏳ 読み込み中' : '✅ 完了'}</div>
-          
-          {/* ローカルストレージ情報 */}
-          <hr style={{ margin: '8px 0' }} />
-          <div><strong>LocalStorage Check:</strong></div>
-          {(() => {
-            const localData = localStorage.getItem('review-app-db-v1')
-            if (localData) {
-              try {
-                const parsed = JSON.parse(localData)
-                return (
-                  <div style={{ marginLeft: 12, color: '#f59e0b' }}>
-                    ⚠️ LocalStorageにデータあり: 問題{parsed.problems?.length || 0}件 | ログ{parsed.reviewLogs?.length || 0}件
-                    <br />
-                    <small style={{ color: '#666' }}>リアルタイム同期後はこのデータは使用されません</small>
-                  </div>
-                )
-              } catch {
-                return <div style={{ marginLeft: 12, color: '#ef4444' }}>⚠️ LocalStorageデータ破損</div>
-              }
-            } else {
-              return <div style={{ marginLeft: 12, color: '#10b981' }}>✅ LocalStorageクリア</div>
-            }
-          })()}
-        </div>
-      </details>
 
       {mode === 'setup' ? (
-        // 設定画面
         <div className="grid" style={{ gridTemplateColumns: '1fr', gap: 12 }}>
           <div className="card">
             <h3>復習設定</h3>
@@ -321,34 +236,6 @@ export default function Session(){
                 対象問題数: <strong>{problems.length}件</strong>
               </div>
               
-              {/* デバッグ情報表示 */}
-              {problems.length > 0 && (
-                <details style={{ marginBottom: 16, textAlign: 'left', fontSize: '12px' }}>
-                  <summary style={{ cursor: 'pointer', color: '#666' }}>📊 問題順序プレビュー</summary>
-                  <div style={{ maxHeight: '150px', overflowY: 'auto', marginTop: 8, background: '#f8fafc', padding: 8, borderRadius: 4 }}>
-                    {getSortedProblems().slice(0, 10).map((problemId, index) => {
-                      const problem = realtimeStore.problems.find(p => p.id === problemId)
-                      const logs = realtimeStore.reviewLogs.filter(log => log.problemId === problemId && log.userId === userId)
-                      const wrongCount = logs.filter(log => log.rating === 'wrong').length
-                      const doubtCount = logs.filter(log => log.rating === 'doubt').length
-                      const score = wrongCount * 2 + doubtCount * 1
-                      
-                      return (
-                        <div key={problemId} style={{ marginBottom: 4 }}>
-                          <span style={{ color: '#3b82f6', fontWeight: 'bold' }}>{index + 1}.</span> 
-                          <span style={{ color: score > 0 ? '#ef4444' : '#666' }}>
-                            [{score > 0 ? `スコア${score}` : '新規'}]
-                          </span> 
-                          {problem?.text.slice(0, 20)}{(problem?.text.length || 0) > 20 ? '...' : ''}
-                        </div>
-                      )
-                    })}
-                    {problems.length > 10 && (
-                      <div style={{ color: '#666', fontStyle: 'italic' }}>...他{problems.length - 10}件</div>
-                    )}
-                  </div>
-                </details>
-              )}
               {problems.length > 0 ? (
                 <button 
                   className="button" 
@@ -366,15 +253,16 @@ export default function Session(){
                   🎲 ランダム復習をはじめる
                 </button>
               ) : (
-                <p style={{ color: '#f59e0b' }}>条件に合う問題がありません。<br/>フィルタを見直してください。</p>
+                <div style={{ color: '#f59e0b' }}>
+                  <p>条件に合う問題がありません。</p>
+                  <p>フィルタを見直すか、まずは問題を登録してください。</p>
+                </div>
               )}
             </div>
           </div>
         </div>
       ) : (
-        // 復習画面
         <div className="grid" style={{ gridTemplateColumns: '1fr', gap: 12 }}>
-          {/* 進捗表示 */}
           <div className="card" style={{ textAlign: 'center', padding: '12px' }}>
             <div style={{ fontSize: '18px', marginBottom: '8px' }}>
               {queue.length > 0 && (

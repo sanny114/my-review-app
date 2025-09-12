@@ -3,37 +3,32 @@ import App from '../App'
 import { Problem } from '../types'
 import { useRealtimeStore } from '../stores/RealtimeStore'
 
-
 const fixedSubjects = ['漢字','算数']
 
-
 type FormState = {
-userId: 'rin'|'yui'
-subjectName: string
-subjectFixed: boolean
-text: string
-answer: string
-tagsInput: string
-source: string
-memo: string
+  userId: 'rin'|'yui'
+  subjectName: string
+  subjectFixed: boolean
+  text: string
+  answer: string
+  tagsInput: string
+  source: string
+  memo: string
 }
 
-
 export default function RegisterForm(){
-// リアルタイムストアを使用
-const realtimeStore = useRealtimeStore()
+  // リアルタイムストアを使用
+  const realtimeStore = useRealtimeStore()
 
-const [state, setState] = useState<FormState>({
-  userId: 'rin', subjectName: '漢字', subjectFixed: true,
+  const [state, setState] = useState<FormState>({
+    userId: 'rin', subjectName: '漢字', subjectFixed: true,
     text:'', answer:'', tagsInput:'', source:'', memo:''
   })
-
 
   const subjects = useMemo(()=>{
     const free = Array.from(new Set(realtimeStore.problems.map(p=>p.subjectFixed? null : p.subjectName).filter(Boolean))) as string[]
     return [...fixedSubjects, ...free]
-  },[realtimeStore.problems]) // リアルタイムデータを依存に
-
+  },[realtimeStore.problems])
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -80,7 +75,6 @@ const [state, setState] = useState<FormState>({
     }
   }
 
-
   return (
     <App>
       <h2>問題を登録</h2>
@@ -110,48 +104,8 @@ const [state, setState] = useState<FormState>({
             「データ入出力」ページでGoogleログインしてください。
           </p>
         )}
-        
-        {/* デバッグボタン */}
-        {realtimeStore.user && (
-          <div style={{ marginTop: 12 }}>
-            <button 
-              type="button"
-              className="button secondary"
-              style={{ fontSize: '14px', padding: '8px 16px' }}
-              onClick={async () => {
-                console.log('🔍 デバッグ：認証状態チェック:', {
-                  user: realtimeStore.user?.email,
-                  uid: realtimeStore.user?.uid,
-                  problems: realtimeStore.problems.length
-                })
-                
-                try {
-                  console.log('🚀 デバッグ：テスト問題の追加開始...')
-                  
-                  await realtimeStore.addProblem({
-                    userId: 'rin',
-                    subjectName: '漢字',
-                    subjectFixed: true,
-                    text: 'デバッグテスト問題：' + new Date().toLocaleTimeString(),
-                    answer: 'テスト答え',
-                    tags: ['デバッグ'],
-                    archived: false
-                  })
-                  
-                  console.log('✅ デバッグ：テスト問題の追加成功!')
-                  alert('✅ デバッグテスト成功！問題が追加されました。')
-                } catch (error) {
-                  console.error('❌ デバッグ：テスト問題の追加失敗:', error)
-                  const message = error instanceof Error ? error.message : String(error)
-                  alert('❌ デバッグテスト失敗: ' + message)
-                }
-              }}
-            >
-              🔧 デバッグテスト実行
-            </button>
-          </div>
-        )}
       </div>
+
       <form className="grid" onSubmit={onSubmit}>
         <div className="grid" style={{gridTemplateColumns:'1fr 1fr', gap:12}}>
           <div>
@@ -202,7 +156,9 @@ const [state, setState] = useState<FormState>({
             disabled={!realtimeStore.user}
             style={{
               opacity: !realtimeStore.user ? 0.5 : 1,
-              cursor: !realtimeStore.user ? 'not-allowed' : 'pointer'
+              cursor: !realtimeStore.user ? 'not-allowed' : 'pointer',
+              padding: '12px 24px',
+              fontSize: '16px'
             }}
           >
             {realtimeStore.user ? '🚀 保存する（リアルタイム同期）' : 'ログインが必要'}
