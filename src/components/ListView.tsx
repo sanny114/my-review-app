@@ -75,43 +75,138 @@ memo: problem.memo
 })
 }
 
-// 編集保存
+// ✅ 編集保存（安全性を向上）
 const saveEdit = async () => {
   if (!editingId || !editForm.text?.trim() || !editForm.answer?.trim()) {
     alert('問題文と答えは必須です')
     return
   }
 
-  if (!realtimeStore.user) {
-    alert('更新にはログインが必要です')
+  // 編集対象の問題を特定
+  const problemToEdit = items.find(p => p.id === editingId)
+  if (!problemToEdit) {
+    alert('編集対象の問題が見つかりません')
+    setEditingId(null)
     return
   }
 
+  // データソースに応じた編集処理
   try {
-    // データ更新
-    const patch: Partial<Problem> = {
-      subjectName: editForm.subjectName?.trim() || '未分類',
-      subjectFixed: ['漢字', '算数'].includes(editForm.subjectName?.trim() || ''),
-      text: editForm.text.trim(),
-      answer: editForm.answer.trim(),
-      tags: editForm.tags || [],
+    if (dataSource === 'realtime') {
+      // リアルタイムストアでの編集
+      if (!realtimeStore.user) {
+        alert('更新にはログインが必要です')
+        return
+      }
+      
+      // Firestoreに問題が存在するかチェック
+      const existsInFirestore = realtimeStore.problems.some(p => p.id === editingId)
+      if (!existsInFirestore) {
+        alert('⚠️ この問題はFirestoreに存在しません。\n\n「統合表示」に切り替えてローカルデータとして編集するか、\nデータクリーンアップを実行してください。')
+        return
+      }
+      
+      // データ更新
+      const patch: Partial<Problem> = {
+        subjectName: editForm.subjectName?.trim() || '未分類',
+        subjectFixed: ['漢字', '算数'].includes(editForm.subjectName?.trim() || ''),
+        text: editForm.text.trim(),
+        answer: editForm.answer.trim(),
+        tags: editForm.tags || [],
+      }
+      
+      // undefined を避けるため、値がある場合のみフィールドを追加
+      if (editForm.source?.trim()) {
+        patch.source = editForm.source.trim()
+      }
+      if (editForm.memo?.trim()) {
+        patch.memo = editForm.memo.trim()
+      }
+
+      await realtimeStore.updateProblem(editingId, patch)
+    } else if (dataSource === 'local') {
+      // ローカルStorageでの編集
+      const { updateProblem, loadDB } = await import('../store')
+      const currentDB = loadDB()
+      
+      const patch: Partial<Problem> = {
+        subjectName: editForm.subjectName?.trim() || '未分類',
+        subjectFixed: ['漢字', '算数'].includes(editForm.subjectName?.trim() || ''),
+        text: editForm.text.trim(),
+        answer: editForm.answer.trim(),
+        tags: editForm.tags || [],
+      }
+      
+      if (editForm.source?.trim()) {
+        patch.source = editForm.source.trim()
+      }
+      if (editForm.memo?.trim()) {
+        patch.memo = editForm.memo.trim()
+      }
+      
+      updateProblem(currentDB, editingId, patch)
+    } else {
+      // 統合表示での編集（どちらに存在するかチェック）
+      const existsInFirestore = realtimeStore.problems.some(p => p.id === editingId)
+      const existsInLocal = localDB.problems.some(p => p.id === editingId)
+      
+      if (existsInFirestore && realtimeStore.user) {
+        // Firestoreに存在する場合
+        const patch: Partial<Problem> = {
+          subjectName: editForm.subjectName?.trim() || '未分類',
+          subjectFixed: ['漢字', '算数'].includes(editForm.subjectName?.trim() || ''),
+          text: editForm.text.trim(),
+          answer: editForm.answer.trim(),
+          tags: editForm.tags || [],
+        }
+        
+        if (editForm.source?.trim()) {
+          patch.source = editForm.source.trim()
+        }
+        if (editForm.memo?.trim()) {
+          patch.memo = editForm.memo.trim()
+        }
+        
+        await realtimeStore.updateProblem(editingId, patch)
+      } else if (existsInLocal) {
+        // ローカルにのみ存在する場合
+        const { updateProblem, loadDB } = await import('../store')
+        const currentDB = loadDB()
+        
+        const patch: Partial<Problem> = {
+          subjectName: editForm.subjectName?.trim() || '未分類',
+          subjectFixed: ['漢字', '算数'].includes(editForm.subjectName?.trim() || ''),
+          text: editForm.text.trim(),
+          answer: editForm.answer.trim(),
+          tags: editForm.tags || [],
+        }
+        
+        if (editForm.source?.trim()) {
+          patch.source = editForm.source.trim()
+        }
+        if (editForm.memo?.trim()) {
+          patch.memo = editForm.memo.trim()
+        }
+        
+        updateProblem(currentDB, editingId, patch)
+      } else {
+        alert('編集対象の問題が見つかりません')
+        setEditingId(null)
+        return
+      }
     }
     
-    // undefined を避けるため、値がある場合のみフィールドを追加
-    if (editForm.source?.trim()) {
-      patch.source = editForm.source.trim()
-    }
-    if (editForm.memo?.trim()) {
-      patch.memo = editForm.memo.trim()
-    }
-
-    await realtimeStore.updateProblem(editingId, patch)
     setEditingId(null)
     setEditForm({})
     alert('保存しました')
   } catch (error) {
     console.error('Failed to update problem:', error)
-    alert('更新に失敗しました。ネットワークを確認してください。')
+    const message = error instanceof Error ? error.message : String(error)
+    if (message.includes('No document to update')) {
+      alert('⚠️ この問題はクラウドに存在しません。\n\nデータクリーンアップを実行するか、\n「💾 ローカルStorage」モードで編集してください。')
+    } else {
+      alert('更新に失敗しました: ' + message)
+    }
   }
 }
 
