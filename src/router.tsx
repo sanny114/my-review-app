@@ -7,6 +7,7 @@ import Dashboard from './components/Dashboard'
 import DataIO from './components/DataIO'
 import Settings from './components/Settings'
 import DataCleanup from './components/DataCleanup'
+import FirestoreCleanup from './components/FirestoreCleanup'
 
 
 export const router = createHashRouter([
@@ -17,5 +18,6 @@ export const router = createHashRouter([
 { path: '/dashboard', element: <Dashboard/> },
 { path: '/data', element: <DataIO/> },
 { path: '/settings', element: <Settings/> },
-{ path: '/cleanup', element: <DataCleanup/> }
+{ path: '/cleanup', element: <DataCleanup/> },
+{ path: '/firestore-cleanup', element: <FirestoreCleanup/> }
 ])
