@@ -6,7 +6,6 @@ import ListView from './components/ListView'
 import Dashboard from './components/Dashboard'
 import DataIO from './components/DataIO'
 import Settings from './components/Settings'
-import DataDebug from './components/DataDebug'
 
 export const router = createHashRouter([
 { path: '/', element: <Home/> },
@@ -15,6 +14,5 @@ export const router = createHashRouter([
 { path: '/list', element: <ListView/> },
 { path: '/dashboard', element: <Dashboard/> },
 { path: '/data', element: <DataIO/> },
-{ path: '/settings', element: <Settings/> },
-{ path: '/debug', element: <DataDebug/> }
+{ path: '/settings', element: <Settings/> }
 ])

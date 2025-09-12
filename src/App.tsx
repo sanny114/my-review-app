@@ -15,7 +15,6 @@ return (
 <Link to="/dashboard">ダッシュボード</Link>
 <Link to="/data">データ入出力</Link>
 <Link to="/settings">設定</Link>
-<Link to="/debug" style={{color: '#dc3545'}}>🔧デバッグ</Link>
 </nav>
 </header>
 <div className="container">
