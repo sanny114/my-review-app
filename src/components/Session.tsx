@@ -154,6 +154,27 @@ export default function Session(){
 
   const current = realtimeStore.problems.find(p => p.id === queue[idx])
 
+  // 現在の問題の過去履歴を取得
+  const getCurrentProblemHistory = () => {
+    if (!current) return []
+    
+    const logs = realtimeStore.reviewLogs
+      .filter(log => log.problemId === current.id && log.userId === userId)
+      .sort((a, b) => new Date(a.reviewedAt).getTime() - new Date(b.reviewedAt).getTime())
+      .slice(-7) // 直近7回分のみ表示
+    
+    return logs.map(log => {
+      switch(log.rating) {
+        case 'correct': return '○'
+        case 'doubt': return '△'  
+        case 'wrong': return '×'
+        default: return '?'
+      }
+    })
+  }
+
+  const historySymbols = getCurrentProblemHistory()
+
   const addRepeat = (pid: string, rating: RatingCode) => {
     if (!repeatWithin) return
     if (repeatMistakes && (rating === 'wrong' || rating === 'doubt')) {
@@ -290,6 +311,33 @@ export default function Session(){
           {current ? (
             <div className="card">
               <h3 style={{ marginTop: 8, fontSize: '24px', lineHeight: '1.4' }}>{current.text}</h3>
+
+              {/* 過去履歴表示 */}
+              {historySymbols.length > 0 && (
+                <div style={{ 
+                  marginTop: '12px', 
+                  padding: '8px 12px', 
+                  backgroundColor: '#f8f9fa', 
+                  borderRadius: '4px',
+                  border: '1px solid #e9ecef'
+                }}>
+                  <div style={{ fontSize: '14px', color: '#666', marginBottom: '4px' }}>
+                    📊 過去の解答履歴（右が最新）
+                  </div>
+                  <div style={{ 
+                    fontSize: '18px', 
+                    fontFamily: 'monospace',
+                    letterSpacing: '4px',
+                    color: '#495057',
+                    fontWeight: 'bold'
+                  }}>
+                    {historySymbols.join(' ')}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#6c757d', marginTop: '4px' }}>
+                    ○：できた　△：自信ない　×：まちがった
+                  </div>
+                </div>
+              )}
 
               {showAns ? (
                 <div className="card" style={{ background: '#f8fafc' }}>

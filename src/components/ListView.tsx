@@ -10,9 +10,29 @@ export default function ListView(){
   const [userId, setUserId] = useState<'rin'|'yui'>('rin')
   const [subject, setSubject] = useState('')
   const [q, setQ] = useState('')
+  const [sortBy, setSortBy] = useState<'newest' | 'wrongCount' | 'correctRate' | 'totalAttempts'>('newest')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<Partial<Problem>>({})
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+
+  // 問題ごとの統計惇報を計算
+  const getProblemStats = (problemId: string) => {
+    const logs = realtimeStore.reviewLogs.filter(log => 
+      log.problemId === problemId && log.userId === userId
+    )
+    
+    const totalAttempts = logs.length
+    const wrongCount = logs.filter(log => log.rating === 'wrong').length
+    const correctCount = logs.filter(log => log.rating === 'correct').length
+    const correctRate = totalAttempts > 0 ? (correctCount / totalAttempts) * 100 : 0
+    
+    return {
+      totalAttempts,
+      wrongCount,
+      correctCount,
+      correctRate: Math.round(correctRate)
+    }
+  }
 
   // シンプル化：RealtimeStoreのデータのみ使用
   const items = useMemo(()=>{
@@ -22,8 +42,26 @@ export default function ListView(){
       const k = q.toLowerCase()
       arr = arr.filter(p=> (p.text+p.answer+(p.source||'')+(p.memo||'')).toLowerCase().includes(k))
     }
-    return arr
-  },[realtimeStore.problems, userId, subject, q])
+    
+    // 統計情報付きの配列を作成
+    const arrWithStats = arr.map(p => ({
+      ...p,
+      stats: getProblemStats(p.id)
+    }))
+    
+    // ソート機能を追加
+    if (sortBy === 'newest') {
+      arrWithStats.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    } else if (sortBy === 'wrongCount') {
+      arrWithStats.sort((a, b) => b.stats.wrongCount - a.stats.wrongCount)
+    } else if (sortBy === 'correctRate') {
+      arrWithStats.sort((a, b) => a.stats.correctRate - b.stats.correctRate)
+    } else if (sortBy === 'totalAttempts') {
+      arrWithStats.sort((a, b) => b.stats.totalAttempts - a.stats.totalAttempts)
+    }
+    
+    return arrWithStats
+  },[realtimeStore.problems, realtimeStore.reviewLogs, userId, subject, q, sortBy])
 
   // フィルタが変わったら選択をクリア
   useMemo(() => {
@@ -181,6 +219,13 @@ export default function ListView(){
           </select>
           <label>検索</label>
           <input className="input" value={q} onChange={e=>setQ(e.target.value)} placeholder="キーワード" />
+          <label>並び順</label>
+          <select className="input" value={sortBy} onChange={e=>setSortBy(e.target.value as any)}>
+            <option value="newest">最新順</option>
+            <option value="wrongCount">間違い多い順</option>
+            <option value="correctRate">正答率低い順</option>
+            <option value="totalAttempts">挑戦回数多い順</option>
+          </select>
         </div>
 
         {/* 選択状態と一括操作 */}
@@ -233,6 +278,8 @@ export default function ListView(){
               <th>正答</th>
               <th>タグ</th>
               <th>出典</th>
+              <th>間違い</th>
+              <th>正答率</th>
               <th>登録日時</th>
               <th>操作</th>
             </tr>
@@ -323,6 +370,26 @@ export default function ListView(){
                         style={{width: '120px'}}
                       />
                     ) : (p.source || '')}
+                  </td>
+
+                  {/* 間違い回数 */}
+                  <td style={{textAlign: 'center', color: p.stats.wrongCount > 0 ? '#dc3545' : '#6c757d'}}>
+                    {p.stats.wrongCount > 0 ? `${p.stats.wrongCount}回` : '-'}
+                  </td>
+
+                  {/* 正答率 */}
+                  <td style={{textAlign: 'center'}}>
+                    {p.stats.totalAttempts > 0 ? (
+                      <span style={{
+                        color: p.stats.correctRate >= 80 ? '#28a745' : 
+                               p.stats.correctRate >= 60 ? '#ffc107' : '#dc3545',
+                        fontWeight: 'bold'
+                      }}>
+                        {p.stats.correctRate}%
+                      </span>
+                    ) : (
+                      <span style={{color: '#6c757d'}}>-</span>
+                    )}
                   </td>
 
                   {/* 登録日時 */}
