@@ -278,6 +278,7 @@ export default function ListView(){
               <th>正答</th>
               <th>タグ</th>
               <th>出典</th>
+              <th>挑戦回数</th>
               <th>間違い</th>
               <th>正答率</th>
               <th>登録日時</th>
@@ -370,6 +371,11 @@ export default function ListView(){
                         style={{width: '120px'}}
                       />
                     ) : (p.source || '')}
+                  </td>
+
+                  {/* 挑戦回数 */}
+                  <td style={{textAlign: 'center', color: p.stats.totalAttempts > 0 ? '#495057' : '#6c757d'}}>
+                    {p.stats.totalAttempts > 0 ? `${p.stats.totalAttempts}回` : '-'}
                   </td>
 
                   {/* 間違い回数 */}
