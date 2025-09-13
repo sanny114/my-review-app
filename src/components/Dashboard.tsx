@@ -1,7 +1,6 @@
 import App from '../App'
 import { useRealtimeStore } from '../stores/RealtimeStore'
 import { useMemo, useState } from 'react'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
 
 const jstMidnight = (d = new Date()) => new Date(d.getFullYear(), d.getMonth(), d.getDate())
@@ -85,63 +84,129 @@ return (
   </h3>
   
   {dailyData.length > 0 ? (
-    <div style={{ width: '100%', height: range === '7' ? '300px' : '400px' }}>
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart
-          data={dailyData}
-          margin={{
-            top: 5,
-            right: 30,
-            left: 20,
-            bottom: 60
-          }}
-        >
-          <CartesianGrid strokeDasharray="3 3" stroke="#e9ecef" />
-          <XAxis 
-            dataKey={range === '7' ? 'shortLabel' : 'shortLabel'}
-            angle={range === '7' ? 0 : -45}
-            textAnchor={range === '7' ? 'middle' : 'end'}
-            height={range === '7' ? 30 : 80}
-            fontSize={12}
-            stroke="#6c757d"
-          />
-          <YAxis 
-            stroke="#6c757d"
-            fontSize={12}
-          />
-          <Tooltip 
-            content={({ active, payload, label }) => {
-              if (active && payload && payload.length) {
-                const data = payload[0].payload
-                return (
+    <div style={{ width: '100%' }}>
+      {/* グラフエリア */}
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'end', 
+        height: '200px',
+        padding: '20px 0',
+        borderBottom: '2px solid #e9ecef',
+        marginBottom: '10px'
+      }}>
+        {dailyData.map((item, index) => {
+          const maxCount = Math.max(...dailyData.map(d => d.count), 1)
+          const barHeight = item.count > 0 ? Math.max((item.count / maxCount) * 160, 8) : 2
+          
+          return (
+            <div 
+              key={item.date}
+              style={{ 
+                flex: 1, 
+                display: 'flex', 
+                flexDirection: 'column', 
+                alignItems: 'center',
+                margin: '0 2px',
+                position: 'relative'
+              }}
+            >
+              {/* バー */}
+              <div
+                style={{
+                  width: '100%',
+                  maxWidth: range === '7' ? '40px' : '25px',
+                  height: `${barHeight}px`,
+                  backgroundColor: item.count > 0 ? '#3b82f6' : '#e9ecef',
+                  borderRadius: '4px 4px 0 0',
+                  border: '1px solid #2563eb',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  position: 'relative'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = item.count > 0 ? '#2563eb' : '#dee2e6'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = item.count > 0 ? '#3b82f6' : '#e9ecef'
+                }}
+                title={`${item.label}: ${item.count}問題を解いた`}
+              >
+                {/* 数値表示 */}
+                {item.count > 0 && (
                   <div style={{
-                    backgroundColor: 'white',
-                    border: '1px solid #ccc',
-                    borderRadius: '4px',
-                    padding: '8px',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+                    position: 'absolute',
+                    top: '-25px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    color: '#495057',
+                    whiteSpace: 'nowrap'
                   }}>
-                    <p style={{ margin: 0, fontWeight: 'bold', color: '#495057' }}>
-                      {data.label}
-                    </p>
-                    <p style={{ margin: '4px 0 0 0', color: '#3b82f6' }}>
-                      📝 {data.count}問題を解いた
-                    </p>
+                    {item.count}
                   </div>
-                )
-              }
-              return null
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+      
+      {/* X軸ラベル */}
+      <div style={{ 
+        display: 'flex',
+        marginTop: '5px'
+      }}>
+        {dailyData.map((item) => (
+          <div 
+            key={item.date}
+            style={{ 
+              flex: 1, 
+              textAlign: 'center',
+              fontSize: '11px',
+              color: '#6c757d',
+              margin: '0 2px',
+              lineHeight: '1.2'
             }}
-          />
-          <Bar 
-            dataKey="count" 
-            fill="#3b82f6"
-            radius={[4, 4, 0, 0]}
-            stroke="#2563eb"
-            strokeWidth={1}
-          />
-        </BarChart>
-      </ResponsiveContainer>
+          >
+            <div>{item.shortLabel}</div>
+            <div style={{ fontSize: '10px', color: '#adb5bd' }}>
+              ({item.weekday})
+            </div>
+          </div>
+        ))}
+      </div>
+      
+      {/* 統計情報 */}
+      <div style={{
+        marginTop: '16px',
+        padding: '12px',
+        backgroundColor: '#f8f9fa',
+        borderRadius: '6px',
+        display: 'flex',
+        justifyContent: 'space-around',
+        flexWrap: 'wrap',
+        gap: '8px'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '14px', color: '#6c757d' }}>合計</div>
+          <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#495057' }}>
+            {dailyData.reduce((sum, item) => sum + item.count, 0)}問
+          </div>
+        </div>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '14px', color: '#6c757d' }}>平均</div>
+          <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#495057' }}>
+            {(dailyData.reduce((sum, item) => sum + item.count, 0) / dailyData.length).toFixed(1)}問/日
+          </div>
+        </div>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '14px', color: '#6c757d' }}>最高</div>
+          <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#3b82f6' }}>
+            {Math.max(...dailyData.map(d => d.count))}問
+          </div>
+        </div>
+      </div>
     </div>
   ) : (
     <div style={{ 
