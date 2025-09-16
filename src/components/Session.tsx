@@ -310,7 +310,12 @@ export default function Session(){
 
           {current ? (
             <div className="card">
-              <h3 style={{ marginTop: 8, fontSize: '24px', lineHeight: '1.4' }}>{current.text}</h3>
+              <h3 style={{ 
+                marginTop: 8, 
+                fontSize: '24px', 
+                lineHeight: '1.4',
+                whiteSpace: 'pre-wrap'
+              }}>{current.text}</h3>
 
               {/* 過去履歴表示 */}
               {historySymbols.length > 0 && (
@@ -342,8 +347,16 @@ export default function Session(){
               {showAns ? (
                 <div className="card" style={{ background: '#f8fafc' }}>
                   <div><b>正答:</b></div>
-                  <div style={{ fontSize: '18px', marginTop: '8px' }}>{current.answer}</div>
-                  {current.memo && <div style={{ marginTop: 8, color: '#555' }}><b>メモ:</b> {current.memo}</div>}
+                  <div style={{ 
+                    fontSize: '18px', 
+                    marginTop: '8px',
+                    whiteSpace: 'pre-wrap'
+                  }}>{current.answer}</div>
+                  {current.memo && <div style={{ 
+                    marginTop: 8, 
+                    color: '#555',
+                    whiteSpace: 'pre-wrap'
+                  }}><b>メモ:</b> {current.memo}</div>}
                 </div>
               ) : null}
 
