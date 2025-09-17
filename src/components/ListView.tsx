@@ -318,33 +318,57 @@ export default function ListView(){
                   </td>
 
                   {/* 問題文 */}
-                  <td style={{minWidth: '200px'}}>
+                  <td style={{minWidth: '300px'}}>
                     {isEditing ? (
                       <textarea 
                         value={editForm.text || ''} 
                         onChange={e => setEditForm({...editForm, text: e.target.value})}
-                        rows={3}
-                        style={{width: '100%', resize: 'vertical'}}
+                        rows={5}
+                        style={{
+                          width: '100%', 
+                          minWidth: '300px',
+                          resize: 'vertical',
+                          fontFamily: 'inherit',
+                          fontSize: '14px'
+                        }}
                       />
                     ) : (
-                      <div style={{maxWidth: '200px', wordWrap: 'break-word'}}>
-                        {p.text.length > 60 ? p.text.slice(0, 60) + '...' : p.text}
+                      <div style={{
+                        maxWidth: '300px', 
+                        wordWrap: 'break-word',
+                        whiteSpace: 'pre-wrap',
+                        fontSize: '14px',
+                        lineHeight: '1.4'
+                      }}>
+                        {p.text.length > 100 ? p.text.slice(0, 100) + '...' : p.text}
                       </div>
                     )}
                   </td>
 
                   {/* 正答 */}
-                  <td style={{minWidth: '120px'}}>
+                  <td style={{minWidth: '250px'}}>
                     {isEditing ? (
                       <textarea 
                         value={editForm.answer || ''} 
                         onChange={e => setEditForm({...editForm, answer: e.target.value})}
-                        rows={2}
-                        style={{width: '100%', resize: 'vertical'}}
+                        rows={4}
+                        style={{
+                          width: '100%', 
+                          minWidth: '250px',
+                          resize: 'vertical',
+                          fontFamily: 'inherit',
+                          fontSize: '14px'
+                        }}
                       />
                     ) : (
-                      <div style={{maxWidth: '120px', wordWrap: 'break-word'}}>
-                        {p.answer.length > 30 ? p.answer.slice(0, 30) + '...' : p.answer}
+                      <div style={{
+                        maxWidth: '250px', 
+                        wordWrap: 'break-word',
+                        whiteSpace: 'pre-wrap',
+                        fontSize: '14px',
+                        lineHeight: '1.4'
+                      }}>
+                        {p.answer.length > 60 ? p.answer.slice(0, 60) + '...' : p.answer}
                       </div>
                     )}
                   </td>
@@ -356,7 +380,7 @@ export default function ListView(){
                         value={(editForm.tags || []).join('; ')} 
                         onChange={e => setEditForm({...editForm, tags: e.target.value.split(';').map(t => t.trim()).filter(t => t)})}
                         placeholder="タグ1; タグ2"
-                        style={{width: '120px'}}
+                        style={{width: '150px'}}
                       />
                     ) : (p.tags||[]).join('; ')}
                   </td>
@@ -368,7 +392,7 @@ export default function ListView(){
                         value={editForm.source || ''} 
                         onChange={e => setEditForm({...editForm, source: e.target.value})}
                         placeholder="出典"
-                        style={{width: '120px'}}
+                        style={{width: '150px'}}
                       />
                     ) : (p.source || '')}
                   </td>
