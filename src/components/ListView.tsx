@@ -261,7 +261,7 @@ export default function ListView(){
       </div>
 
       <div className="card" style={{overflowX:'auto', maxWidth: '100%'}}>
-        <table className="table" style={{minWidth: '1200px', fontSize: '14px', borderCollapse: 'separate', borderSpacing: 0}}>
+        <table className="table" style={{minWidth: '1050px', fontSize: '14px', borderCollapse: 'separate', borderSpacing: 0}}>
           <thead>
             <tr>
               <th style={{width: '40px'}}>
@@ -273,15 +273,15 @@ export default function ListView(){
                   title={selectedIds.size === items.length ? '全解除' : '全選択'}
                 />
               </th>
-              <th style={{width: '80px'}}>科目</th>
-              <th style={{width: '220px'}}>問題文</th>
-              <th style={{width: '180px'}}>正答</th>
-              <th style={{width: '100px'}}>タグ</th>
-              <th style={{width: '100px'}}>出典</th>
-              <th style={{width: '80px'}}>挑戦回数</th>
-              <th style={{width: '60px'}}>間違い</th>
-              <th style={{width: '60px'}}>正答率</th>
-              <th style={{width: '120px'}}>登録日時</th>
+              <th style={{width: '60px'}}>科目</th>
+              <th style={{width: '200px'}}>問題文</th>
+              <th style={{width: '160px'}}>正答</th>
+              <th style={{width: '70px'}}>挑戦回数</th>
+              <th style={{width: '50px'}}>間違い</th>
+              <th style={{width: '50px'}}>正答率</th>
+              <th style={{width: '80px'}}>タグ</th>
+              <th style={{width: '80px'}}>出典</th>
+              <th style={{width: '100px'}}>登録日時</th>
               <th style={{width: '160px', position: 'sticky', right: 0, backgroundColor: 'white', borderLeft: '2px solid #dee2e6'}}>操作</th>
             </tr>
           </thead>
@@ -301,12 +301,12 @@ export default function ListView(){
                     />
                   </td>
                   {/* 科目 */}
-                  <td style={{width: '80px', maxWidth: '80px'}}>
+                  <td style={{width: '60px', maxWidth: '60px'}}>
                     {isEditing ? (
                       <select 
                         value={editForm.subjectName || ''} 
                         onChange={e => setEditForm({...editForm, subjectName: e.target.value})}
-                        style={{width: '75px', fontSize: '13px'}}
+                        style={{width: '55px', fontSize: '12px'}}
                       >
                         <option value="漢字">漢字</option>
                         <option value="算数">算数</option>
@@ -315,12 +315,12 @@ export default function ListView(){
                         <option value="社会">社会</option>
                       </select>
                     ) : (
-                      <div style={{fontSize: '13px'}}>{p.subjectName}</div>
+                      <div style={{fontSize: '12px'}}>{p.subjectName}</div>
                     )}
                   </td>
 
                   {/* 問題文 */}
-                  <td style={{width: '220px', maxWidth: '220px'}}>
+                  <td style={{width: '200px', maxWidth: '200px'}}>
                     {isEditing ? (
                       <textarea 
                         value={editForm.text || ''} 
@@ -328,28 +328,28 @@ export default function ListView(){
                         rows={4}
                         style={{
                           width: '100%', 
-                          maxWidth: '210px',
+                          maxWidth: '190px',
                           resize: 'vertical',
                           fontFamily: 'inherit',
-                          fontSize: '13px'
+                          fontSize: '12px'
                         }}
                       />
                     ) : (
                       <div style={{
-                        maxWidth: '220px', 
+                        maxWidth: '200px', 
                         wordWrap: 'break-word',
                         whiteSpace: 'pre-wrap',
-                        fontSize: '13px',
+                        fontSize: '12px',
                         lineHeight: '1.3',
                         overflow: 'hidden'
                       }}>
-                        {p.text.length > 80 ? p.text.slice(0, 80) + '...' : p.text}
+                        {p.text.length > 70 ? p.text.slice(0, 70) + '...' : p.text}
                       </div>
                     )}
                   </td>
 
                   {/* 正答 */}
-                  <td style={{width: '180px', maxWidth: '180px'}}>
+                  <td style={{width: '160px', maxWidth: '160px'}}>
                     {isEditing ? (
                       <textarea 
                         value={editForm.answer || ''} 
@@ -357,87 +357,103 @@ export default function ListView(){
                         rows={4}
                         style={{
                           width: '100%', 
-                          maxWidth: '170px',
+                          maxWidth: '150px',
                           resize: 'vertical',
                           fontFamily: 'inherit',
-                          fontSize: '13px'
+                          fontSize: '12px'
                         }}
                       />
                     ) : (
                       <div style={{
-                        maxWidth: '180px', 
+                        maxWidth: '160px', 
                         wordWrap: 'break-word',
                         whiteSpace: 'pre-wrap',
-                        fontSize: '13px',
+                        fontSize: '12px',
                         lineHeight: '1.3',
                         overflow: 'hidden'
                       }}>
-                        {p.answer.length > 50 ? p.answer.slice(0, 50) + '...' : p.answer}
+                        {p.answer.length > 45 ? p.answer.slice(0, 45) + '...' : p.answer}
                       </div>
                     )}
                   </td>
 
+                  {/* 挑戦回数 */}
+                  <td style={{width: '70px', textAlign: 'center', color: p.stats.totalAttempts > 0 ? '#495057' : '#6c757d', fontSize: '12px'}}>
+                    <div style={{fontWeight: 'bold'}}>
+                      {p.stats.totalAttempts > 0 ? `${p.stats.totalAttempts}` : '-'}
+                    </div>
+                    <div style={{fontSize: '10px', color: '#6c757d'}}>回</div>
+                  </td>
+
+                  {/* 間違い回数 */}
+                  <td style={{width: '50px', textAlign: 'center', fontSize: '12px'}}>
+                    <div style={{
+                      fontWeight: 'bold',
+                      color: p.stats.wrongCount > 0 ? '#dc3545' : '#6c757d'
+                    }}>
+                      {p.stats.wrongCount > 0 ? `${p.stats.wrongCount}` : '-'}
+                    </div>
+                    <div style={{fontSize: '10px', color: '#6c757d'}}>間違い</div>
+                  </td>
+
+                  {/* 正答率 */}
+                  <td style={{width: '50px', textAlign: 'center', fontSize: '12px'}}>
+                    {p.stats.totalAttempts > 0 ? (
+                      <div>
+                        <div style={{
+                          color: p.stats.correctRate >= 80 ? '#28a745' : 
+                                 p.stats.correctRate >= 60 ? '#ffc107' : '#dc3545',
+                          fontWeight: 'bold',
+                          fontSize: '13px'
+                        }}>
+                          {p.stats.correctRate}%
+                        </div>
+                        <div style={{fontSize: '9px', color: '#6c757d'}}>正答率</div>
+                      </div>
+                    ) : (
+                      <span style={{color: '#6c757d'}}>-</span>
+                    )}
+                  </td>
+
                   {/* タグ */}
-                  <td style={{width: '100px', maxWidth: '100px'}}>
+                  <td style={{width: '80px', maxWidth: '80px'}}>
                     {isEditing ? (
                       <input 
                         value={(editForm.tags || []).join('; ')} 
                         onChange={e => setEditForm({...editForm, tags: e.target.value.split(';').map(t => t.trim()).filter(t => t)})}
                         placeholder="タグ1; タグ2"
-                        style={{width: '95px', fontSize: '13px'}}
+                        style={{width: '75px', fontSize: '11px'}}
                       />
                     ) : (
-                      <div style={{fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+                      <div style={{fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
                         {(p.tags||[]).join('; ')}
                       </div>
                     )}
                   </td>
 
                   {/* 出典 */}
-                  <td style={{width: '100px', maxWidth: '100px'}}>
+                  <td style={{width: '80px', maxWidth: '80px'}}>
                     {isEditing ? (
                       <input 
                         value={editForm.source || ''} 
                         onChange={e => setEditForm({...editForm, source: e.target.value})}
                         placeholder="出典"
-                        style={{width: '95px', fontSize: '13px'}}
+                        style={{width: '75px', fontSize: '11px'}}
                       />
                     ) : (
-                      <div style={{fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+                      <div style={{fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
                         {p.source || ''}
                       </div>
                     )}
                   </td>
 
-                  {/* 挑戦回数 */}
-                  <td style={{width: '80px', textAlign: 'center', color: p.stats.totalAttempts > 0 ? '#495057' : '#6c757d', fontSize: '13px'}}>
-                    {p.stats.totalAttempts > 0 ? `${p.stats.totalAttempts}回` : '-'}
-                  </td>
-
-                  {/* 間違い回数 */}
-                  <td style={{width: '60px', textAlign: 'center', color: p.stats.wrongCount > 0 ? '#dc3545' : '#6c757d', fontSize: '13px'}}>
-                    {p.stats.wrongCount > 0 ? `${p.stats.wrongCount}回` : '-'}
-                  </td>
-
-                  {/* 正答率 */}
-                  <td style={{width: '60px', textAlign: 'center', fontSize: '13px'}}>
-                    {p.stats.totalAttempts > 0 ? (
-                      <span style={{
-                        color: p.stats.correctRate >= 80 ? '#28a745' : 
-                               p.stats.correctRate >= 60 ? '#ffc107' : '#dc3545',
-                        fontWeight: 'bold'
-                      }}>
-                        {p.stats.correctRate}%
-                      </span>
-                    ) : (
-                      <span style={{color: '#6c757d'}}>-</span>
-                    )}
-                  </td>
-
                   {/* 登録日時 */}
-                  <td style={{width: '120px', fontSize: '12px'}}>
-                    <div style={{whiteSpace: 'nowrap'}}>
-                      {formatJST(p.createdAt)}
+                  <td style={{width: '100px', fontSize: '11px'}}>
+                    <div style={{whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>
+                      {formatJST(p.createdAt).split(' ')[0]}
+                    </div>
+                    <div style={{fontSize: '10px', color: '#6c757d'}}>
+                      {formatJST(p.createdAt).split(' ')[1]}
                     </div>
                   </td>
 
