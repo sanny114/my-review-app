@@ -116,7 +116,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
         }}>
           <img
             src={preview}
-            alt=\"問題画像プレビュー\"
+            alt="問題画像プレビュー"
             style={{
               maxWidth: '100%',
               maxHeight: '300px',
@@ -127,8 +127,8 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
           />
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
             <button
-              type=\"button\"
-              className=\"button secondary\"
+              type="button"
+              className="button secondary"
               onClick={handleClick}
               disabled={disabled}
               style={{ fontSize: '13px', padding: '6px 12px' }}
@@ -136,8 +136,8 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
               📷 画像変更
             </button>
             <button
-              type=\"button\"
-              className=\"button\"
+              type="button"
+              className="button"
               onClick={handleDelete}
               disabled={disabled}
               style={{ 
@@ -147,7 +147,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
                 borderColor: '#dc3545'
               }}
             >
-              🗑️ 削除
+              🗑️削除
             </button>
           </div>
         </div>
@@ -185,8 +185,8 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
 
       <input
         ref={fileInputRef}
-        type=\"file\"
-        accept=\"image/jpeg,image/png,image/gif,image/webp\"
+        type="file"
+        accept="image/jpeg,image/png,image/gif,image/webp"
         onChange={handleFileInput}
         disabled={disabled}
         style={{ display: 'none' }}
