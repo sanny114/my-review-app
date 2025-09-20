@@ -2,6 +2,9 @@ import { FormEvent, useMemo, useState } from 'react'
 import App from '../App'
 import { Problem } from '../types'
 import { useRealtimeStore } from '../stores/RealtimeStore'
+import ImageUploader from './ImageUploader'
+import { uploadProblemImage, deleteProblemImage } from '../firebase'
+import { uid } from '../utils'
 
 const fixedSubjects = ['漢字','算数']
 
@@ -14,6 +17,8 @@ type FormState = {
   tagsInput: string
   source: string
   memo: string
+  imageFile: File | null // アップロードする画像ファイル
+  imageUrl: string | null // アップロード済み画像URL
 }
 
 export default function RegisterForm(){
@@ -22,13 +27,41 @@ export default function RegisterForm(){
 
   const [state, setState] = useState<FormState>({
     userId: 'rin', subjectName: '漢字', subjectFixed: true,
-    text:'', answer:'', tagsInput:'', source:'', memo:''
+    text:'', answer:'', tagsInput:'', source:'', memo:'',
+    imageFile: null, imageUrl: null
   })
+  const [isUploading, setIsUploading] = useState(false)
 
   const subjects = useMemo(()=>{
     const free = Array.from(new Set(realtimeStore.problems.map(p=>p.subjectFixed? null : p.subjectName).filter(Boolean))) as string[]
     return [...fixedSubjects, ...free]
   },[realtimeStore.problems])
+
+  // 画像アップロードハンドラー
+  const handleImageChange = (file: File | null) => {
+    setState(prev => ({
+      ...prev,
+      imageFile: file,
+      // 新しいファイルが選ばれたら、前のURLをクリア
+      imageUrl: file ? null : prev.imageUrl
+    }))
+  }
+
+  // 画像削除ハンドラー
+  const handleImageDelete = async () => {
+    if (state.imageUrl) {
+      try {
+        await deleteProblemImage(state.imageUrl)
+      } catch (error) {
+        console.warn('画像の削除に失敗しました:', error)
+      }
+    }
+    setState(prev => ({
+      ...prev,
+      imageFile: null,
+      imageUrl: null
+    }))
+  }
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -41,11 +74,13 @@ export default function RegisterForm(){
       return
     }
     
-    const subjFixed = fixedSubjects.includes(state.subjectName)
-    const tags = state.tagsInput.split(';').map(s=>s.trim()).filter(Boolean)
+    setIsUploading(true)
     
     try {
-      // リアルタイムストアに保存（自動同期）
+      const subjFixed = fixedSubjects.includes(state.subjectName)
+      const tags = state.tagsInput.split(';').map(s=>s.trim()).filter(Boolean)
+      
+      // 問題データの基本情報
       const problemData: any = {
         userId: state.userId,
         subjectName: state.subjectName,
@@ -54,6 +89,15 @@ export default function RegisterForm(){
         answer: state.answer.trim(),
         tags,
         archived: false
+      }
+      
+      // 画像アップロード処理
+      if (state.imageFile) {
+        const problemId = uid('p_') // 新しい問題IDを生成
+        const imageUrl = await uploadProblemImage(realtimeStore.user.uid, problemId, state.imageFile)
+        problemData.image = imageUrl
+        // 生成したIDを使用
+        problemData.id = problemId
       }
       
       // undefined を避けるため、値がある場合のみフィールドを追加
@@ -67,11 +111,13 @@ export default function RegisterForm(){
       await realtimeStore.addProblem(problemData)
       
       alert('保存しました！全デバイスに自動同期されます 🎆')
-      setState(s=>({...s, text:'', answer:'', tagsInput:'', source:'', memo:''}))
+      setState(s=>({...s, text:'', answer:'', tagsInput:'', source:'', memo:'', imageFile: null, imageUrl: null}))
     } catch (error) {
       console.error('Failed to save problem:', error)
       const message = error instanceof Error ? error.message : String(error)
       alert('問題の保存に失敗しました: ' + message)
+    } finally {
+      setIsUploading(false)
     }
   }
 
@@ -128,6 +174,15 @@ export default function RegisterForm(){
           <label>問題文（必須）</label>
           <textarea className="input" value={state.text} onChange={e=>setState({...state, text:e.target.value})} rows={4} />
         </div>
+
+        {/* 画像アップロード機能 */}
+        <ImageUploader
+          currentImageUrl={state.imageUrl || undefined}
+          onImageChange={handleImageChange}
+          onImageDelete={handleImageDelete}
+          maxSizeMB={2}
+          disabled={isUploading || !realtimeStore.user}
+        />
         <div>
           <label>正答（必須）</label>
           <textarea className="input" value={state.answer} onChange={e=>setState({...state, answer:e.target.value})} rows={3} />
@@ -153,15 +208,20 @@ export default function RegisterForm(){
           <button 
             className="button" 
             type="submit"
-            disabled={!realtimeStore.user}
+            disabled={!realtimeStore.user || isUploading}
             style={{
-              opacity: !realtimeStore.user ? 0.5 : 1,
-              cursor: !realtimeStore.user ? 'not-allowed' : 'pointer',
+              opacity: (!realtimeStore.user || isUploading) ? 0.5 : 1,
+              cursor: (!realtimeStore.user || isUploading) ? 'not-allowed' : 'pointer',
               padding: '12px 24px',
               fontSize: '16px'
             }}
           >
-            {realtimeStore.user ? '🚀 保存する（リアルタイム同期）' : 'ログインが必要'}
+            {isUploading 
+              ? '🔄 保存中（画像アップロード中）...' 
+              : !realtimeStore.user 
+                ? 'ログインが必要' 
+                : '🚀 保存する（リアルタイム同期）'
+            }
           </button>
         </div>
       </form>

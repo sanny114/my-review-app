@@ -3,6 +3,9 @@ import { useMemo, useState } from 'react'
 import { formatJST } from '../utils'
 import { Problem } from '../types'
 import { useRealtimeStore } from '../stores/RealtimeStore'
+import ProblemImage from './ProblemImage'
+import ImageUploader from './ImageUploader'
+import { uploadProblemImage, deleteProblemImage } from '../firebase'
 
 export default function ListView(){
   const realtimeStore = useRealtimeStore()
@@ -14,6 +17,8 @@ export default function ListView(){
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<Partial<Problem>>({})
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [editImageFile, setEditImageFile] = useState<File | null>(null)
+  const [isImageUploading, setIsImageUploading] = useState(false)
 
   // 問題ごとの統計惇報を計算
   const getProblemStats = (problemId: string) => {
@@ -81,8 +86,10 @@ export default function ListView(){
       answer: problem.answer,
       tags: problem.tags,
       source: problem.source,
-      memo: problem.memo
+      memo: problem.memo,
+      image: problem.image // 現在の画像URLを設定
     })
+    setEditImageFile(null) // 編集開始時は新しいファイルなし
   }
 
   // シンプル化：編集保存
@@ -97,6 +104,8 @@ export default function ListView(){
       return
     }
 
+    setIsImageUploading(true)
+
     try {
       const patch: Partial<Problem> = {
         subjectName: editForm.subjectName?.trim() || '未分類',
@@ -104,6 +113,25 @@ export default function ListView(){
         text: editForm.text.trim(),
         answer: editForm.answer.trim(),
         tags: editForm.tags || [],
+      }
+      
+      // 画像処理
+      if (editImageFile) {
+        // 新しい画像がアップロードされた場合
+        const imageUrl = await uploadProblemImage(realtimeStore.user.uid, editingId, editImageFile)
+        patch.image = imageUrl
+        
+        // 旧い画像がある場合は削除
+        if (editForm.image) {
+          try {
+            await deleteProblemImage(editForm.image)
+          } catch (error) {
+            console.warn('旧い画像の削除に失敗:', error)
+          }
+        }
+      } else if (editForm.image) {
+        // 既存の画像を維持
+        patch.image = editForm.image
       }
       
       if (editForm.source?.trim()) {
@@ -116,11 +144,14 @@ export default function ListView(){
       await realtimeStore.updateProblem(editingId, patch)
       setEditingId(null)
       setEditForm({})
+      setEditImageFile(null)
       alert('保存しました')
     } catch (error) {
       console.error('Failed to update problem:', error)
       const message = error instanceof Error ? error.message : String(error)
       alert('更新に失敗しました: ' + message)
+    } finally {
+      setIsImageUploading(false)
     }
   }
 
@@ -128,6 +159,26 @@ export default function ListView(){
   const cancelEdit = () => {
     setEditingId(null)
     setEditForm({})
+    setEditImageFile(null)
+  }
+
+  // 編集時の画像ハンドラー
+  const handleEditImageChange = (file: File | null) => {
+    setEditImageFile(file)
+  }
+
+  const handleEditImageDelete = async () => {
+    if (editForm.image) {
+      // 既存の画像を削除
+      try {
+        await deleteProblemImage(editForm.image)
+        setEditForm(prev => ({ ...prev, image: undefined }))
+      } catch (error) {
+        console.warn('画像の削除に失敗:', error)
+        alert('画像の削除に失敗しました')
+      }
+    }
+    setEditImageFile(null)
   }
 
   // 個別選択のトグル
@@ -322,28 +373,121 @@ export default function ListView(){
                   {/* 問題文 */}
                   <td style={{width: '200px', maxWidth: '200px'}}>
                     {isEditing ? (
-                      <textarea 
-                        value={editForm.text || ''} 
-                        onChange={e => setEditForm({...editForm, text: e.target.value})}
-                        rows={4}
-                        style={{
-                          width: '100%', 
-                          maxWidth: '190px',
-                          resize: 'vertical',
-                          fontFamily: 'inherit',
-                          fontSize: '12px'
-                        }}
-                      />
+                      <div>
+                        <textarea 
+                          value={editForm.text || ''} 
+                          onChange={e => setEditForm({...editForm, text: e.target.value})}
+                          rows={4}
+                          style={{
+                            width: '100%', 
+                            maxWidth: '190px',
+                            resize: 'vertical',
+                            fontFamily: 'inherit',
+                            fontSize: '12px',
+                            marginBottom: '8px'
+                          }}
+                        />
+                        {/* 編集時の画像アップロード */}
+                        <div style={{ fontSize: '11px', marginBottom: '4px' }}>
+                          📷 画像（任意）
+                        </div>
+                        {(editForm.image || editImageFile) ? (
+                          <div style={{ marginBottom: '8px' }}>
+                            <img
+                              src={editImageFile ? URL.createObjectURL(editImageFile) : editForm.image}
+                              alt="編集中の画像"
+                              style={{
+                                maxWidth: '120px',
+                                maxHeight: '60px',
+                                objectFit: 'contain',
+                                border: '1px solid #dee2e6',
+                                borderRadius: '4px'
+                              }}
+                            />
+                            <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
+                              <label style={{
+                                fontSize: '10px',
+                                padding: '2px 6px',
+                                backgroundColor: '#6c757d',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '3px',
+                                cursor: 'pointer'
+                              }}>
+                                変更
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={(e) => handleEditImageChange(e.target.files?.[0] || null)}
+                                  style={{ display: 'none' }}
+                                  disabled={isImageUploading}
+                                />
+                              </label>
+                              <button
+                                type="button"
+                                onClick={handleEditImageDelete}
+                                disabled={isImageUploading}
+                                style={{
+                                  fontSize: '10px',
+                                  padding: '2px 6px',
+                                  backgroundColor: '#dc3545',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '3px',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                削除
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <label style={{
+                            display: 'block',
+                            fontSize: '10px',
+                            padding: '8px',
+                            border: '1px dashed #dee2e6',
+                            borderRadius: '4px',
+                            textAlign: 'center',
+                            cursor: 'pointer',
+                            backgroundColor: '#f8f9fa',
+                            marginBottom: '8px'
+                          }}>
+                            + 画像追加
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => handleEditImageChange(e.target.files?.[0] || null)}
+                              style={{ display: 'none' }}
+                              disabled={isImageUploading}
+                            />
+                          </label>
+                        )}
+                      </div>
                     ) : (
-                      <div style={{
-                        maxWidth: '200px', 
-                        wordWrap: 'break-word',
-                        whiteSpace: 'pre-wrap',
-                        fontSize: '12px',
-                        lineHeight: '1.3',
-                        overflow: 'hidden'
-                      }}>
-                        {p.text.length > 70 ? p.text.slice(0, 70) + '...' : p.text}
+                      <div>
+                        <div style={{
+                          maxWidth: '200px', 
+                          wordWrap: 'break-word',
+                          whiteSpace: 'pre-wrap',
+                          fontSize: '12px',
+                          lineHeight: '1.3',
+                          overflow: 'hidden'
+                        }}>
+                          {p.text.length > 70 ? p.text.slice(0, 70) + '...' : p.text}
+                        </div>
+                        {/* 一覧での画像表示（小さく） */}
+                        {p.image && (
+                          <div style={{ marginTop: '8px' }}>
+                            <ProblemImage
+                              imageUrl={p.image}
+                              alt="問題画像"
+                              maxHeight="80px"
+                              maxWidth="150px"
+                              showZoom={true}
+                            />
+                          </div>
+                        )}
                       </div>
                     )}
                   </td>
@@ -471,15 +615,26 @@ export default function ListView(){
                       <div style={{display: 'flex', gap: '2px', flexDirection: 'column'}}>
                         <button 
                           className="button"
-                          style={{fontSize: '11px', padding: '4px 6px', marginBottom: '2px'}}
+                          style={{
+                            fontSize: '11px', 
+                            padding: '4px 6px', 
+                            marginBottom: '2px',
+                            opacity: isImageUploading ? 0.5 : 1
+                          }}
                           onClick={saveEdit}
+                          disabled={isImageUploading}
                         >
-                          ✔ 保存
+                          {isImageUploading ? '🔄 保存中...' : '✔ 保存'}
                         </button>
                         <button 
                           className="button secondary"
-                          style={{fontSize: '11px', padding: '4px 6px'}}
+                          style={{
+                            fontSize: '11px', 
+                            padding: '4px 6px',
+                            opacity: isImageUploading ? 0.5 : 1
+                          }}
                           onClick={cancelEdit}
+                          disabled={isImageUploading}
                         >
                           ✖ キャンセル
                         </button>

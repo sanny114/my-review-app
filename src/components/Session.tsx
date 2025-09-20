@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import App from '../App'
 import { RatingCode } from '../types'
 import { useRealtimeStore } from '../stores/RealtimeStore'
+import ProblemImage from './ProblemImage'
 
 const ratingBtn: { k: RatingCode; label: string; text: string; className: string; style?: React.CSSProperties }[] = [
   { 
@@ -316,6 +317,16 @@ export default function Session(){
                 lineHeight: '1.4',
                 whiteSpace: 'pre-wrap'
               }}>{current.text}</h3>
+
+              {/* 問題文の画像表示 */}
+              {current.image && (
+                <ProblemImage
+                  imageUrl={current.image}
+                  alt="問題の画像"
+                  maxHeight="400px"
+                  showZoom={true}
+                />
+              )}
 
               {/* 過去履歴表示 */}
               {historySymbols.length > 0 && (

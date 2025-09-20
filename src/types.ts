@@ -10,6 +10,7 @@ userId: User['id']
 subjectName: string // 漢字/算数/自由科目
 subjectFixed: boolean
 text: string
+image?: string // 問題文に添付する画像のURL
 answer: string
 tags: string[]
 source?: string
