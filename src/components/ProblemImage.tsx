@@ -54,7 +54,7 @@ export const ProblemImage: React.FC<ProblemImageProps> = ({
             margin: '0 auto',
             cursor: showZoom ? 'zoom-in' : 'default'
           }}
-          loading=\"lazy\"
+          loading="lazy"
         />
         {showZoom && (
           <div style={{
