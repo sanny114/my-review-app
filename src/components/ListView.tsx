@@ -79,6 +79,11 @@ export default function ListView(){
 
   // 編集開始
   const startEdit = (problem: Problem) => {
+    console.log('🔧 編集開始:', { 
+      problemId: problem.id, 
+      text: problem.text?.slice(0, 30),
+      createdAt: problem.createdAt 
+    })
     setEditingId(problem.id)
     setEditForm({
       subjectName: problem.subjectName,

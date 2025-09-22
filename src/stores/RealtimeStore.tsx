@@ -4,6 +4,7 @@ import {
   collection, 
   doc, 
   addDoc, 
+  setDoc, 
   updateDoc, 
   deleteDoc, 
   onSnapshot, 
@@ -151,20 +152,34 @@ export const RealtimeStoreProvider: React.FC<{ children: ReactNode }> = ({ child
     
     // undefined 値を除去してクリーンなデータを作成
     const cleanData: any = {}
+    let customId: string | undefined
+    
     Object.keys(problemData).forEach(key => {
       const value = (problemData as any)[key]
       if (value !== undefined) {
-        cleanData[key] = value
+        if (key === 'id') {
+          customId = value // カスタムIDを取り出す
+        } else {
+          cleanData[key] = value
+        }
       }
     })
     
-    console.log('💾 問題保存データ:', cleanData)
+    console.log('💾 問題保存データ:', { customId, cleanData })
     
-    await addDoc(collection(db, 'users', user.uid, 'problems'), {
+    const dataToSave = {
       ...cleanData,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
-    })
+    }
+    
+    if (customId) {
+      // カスタムIDが指定されている場合はsetDocを使用
+      await setDoc(doc(db, 'users', user.uid, 'problems', customId), dataToSave)
+    } else {
+      // カスタムIDが指定されていない場合はaddDocを使用
+      await addDoc(collection(db, 'users', user.uid, 'problems'), dataToSave)
+    }
   }
 
   const updateProblem = async (id: string, updates: Partial<Problem>) => {
