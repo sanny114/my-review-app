@@ -211,8 +211,8 @@ export const RealtimeStoreProvider: React.FC<{ children: ReactNode }> = ({ child
     } catch (error) {
       console.error('❌ 更新失敗 - 詳細エラー:', {
         error: error,
-        errorMessage: error.message,
-        errorCode: error.code,
+        errorMessage: error instanceof Error ? error.message : String(error),
+        errorCode: (error as any)?.code || 'unknown',
         id: id,
         updates: cleanUpdates,
         userUid: user.uid

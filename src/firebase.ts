@@ -52,8 +52,8 @@ export const deleteProblemImage = async (imageUrl: string): Promise<void> => {
     console.error('❌ 画像削除エラー:', {
       imageUrl,
       error: error,
-      errorMessage: error.message,
-      errorCode: error.code
+      errorMessage: error instanceof Error ? error.message : String(error),
+      errorCode: (error as any)?.code || 'unknown'
     })
     // 画像削除は失敗しても続行する
     console.warn('Failed to delete image:', error)

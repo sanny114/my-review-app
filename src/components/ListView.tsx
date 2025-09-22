@@ -144,7 +144,7 @@ export default function ListView(){
           }
         } catch (error) {
           console.error('❌ 画像アップロード失敗:', error)
-          throw new Error(`画像アップロードに失敗しました: ${error.message}`)
+          throw new Error(`画像アップロードに失敗しました: ${error instanceof Error ? error.message : String(error)}`)
         }
       } else if (editForm.image) {
         // 既存の画像を維持
