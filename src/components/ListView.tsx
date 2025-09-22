@@ -622,6 +622,10 @@ export default function ListView(){
                     <div style={{fontSize: '10px', color: '#6c757d'}}>
                       {formatJST(p.createdAt).split(' ')[1]}
                     </div>
+                    {/* デバッグ: 実際ID表示 */}
+                    <div style={{fontSize: '9px', color: '#dc3545', fontFamily: 'monospace'}}>
+                      ID: {p.id.slice(0, 12)}...
+                    </div>
                   </td>
 
                   {/* 操作 */}

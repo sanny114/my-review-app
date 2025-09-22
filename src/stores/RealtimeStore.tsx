@@ -28,7 +28,7 @@ interface RealtimeStoreContextType {
   reviewLogs: ReviewLog[]
   
   // Actions
-  addProblem: (problem: Omit<Problem, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>
+  addProblem: (problem: Omit<Problem, 'createdAt' | 'updatedAt'> & { id?: string }) => Promise<void>
   updateProblem: (id: string, updates: Partial<Problem>) => Promise<void>
   deleteProblem: (id: string) => Promise<void>
   addReviewLog: (problemId: string, userId: User['id'], rating: RatingCode) => Promise<void>
@@ -147,7 +147,7 @@ export const RealtimeStoreProvider: React.FC<{ children: ReactNode }> = ({ child
   }, [user])
 
   // Actions実装
-  const addProblem = async (problemData: Omit<Problem, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const addProblem = async (problemData: Omit<Problem, 'createdAt' | 'updatedAt'> & { id?: string }) => {
     if (!user) throw new Error('User not authenticated')
     
     // undefined 値を除去してクリーンなデータを作成
