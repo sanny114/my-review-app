@@ -40,9 +40,22 @@ export const uploadProblemImage = async (uid: string, problemId: string, file: F
 
 export const deleteProblemImage = async (imageUrl: string): Promise<void> => {
   try {
+    console.log('🗑️ 画像削除開始:', imageUrl)
+    
+    // Firebase Storage URLから参照を作成
     const imageRef = ref(storage, imageUrl)
+    console.log('🔍 Storage参照:', imageRef.fullPath)
+    
     await deleteObject(imageRef)
+    console.log('✅ 画像削除成功:', imageUrl)
   } catch (error) {
+    console.error('❌ 画像削除エラー:', {
+      imageUrl,
+      error: error,
+      errorMessage: error.message,
+      errorCode: error.code
+    })
+    // 画像削除は失敗しても続行する
     console.warn('Failed to delete image:', error)
   }
 }

@@ -99,6 +99,8 @@ export default function ListView(){
 
   // シンプル化：編集保存
   const saveEdit = async () => {
+    console.log('🔧 保存開始:', { editingId, editForm })
+    
     if (!editingId || !editForm.text?.trim() || !editForm.answer?.trim()) {
       alert('問題文と答えは必須です')
       return
@@ -120,22 +122,33 @@ export default function ListView(){
         tags: editForm.tags || [],
       }
       
+      console.log('📝 パッチデータ(画像前):', patch)
+      
       // 画像処理
       if (editImageFile) {
-        // 新しい画像がアップロードされた場合
-        const imageUrl = await uploadProblemImage(realtimeStore.user.uid, editingId, editImageFile)
-        patch.image = imageUrl
-        
-        // 旧い画像がある場合は削除
-        if (editForm.image) {
-          try {
-            await deleteProblemImage(editForm.image)
-          } catch (error) {
-            console.warn('旧い画像の削除に失敗:', error)
+        console.log('🇿 新しい画像のアップロード中...', { fileName: editImageFile.name, size: editImageFile.size })
+        try {
+          const imageUrl = await uploadProblemImage(realtimeStore.user.uid, editingId, editImageFile)
+          console.log('✅ 画像アップロード成功:', imageUrl)
+          patch.image = imageUrl
+          
+          // 旧い画像がある場合は削除
+          if (editForm.image) {
+            console.log('🗑️ 旧い画像を削除中:', editForm.image)
+            try {
+              await deleteProblemImage(editForm.image)
+              console.log('✅ 旧い画像削除成功')
+            } catch (error) {
+              console.warn('旧い画像の削除に失敗:', error)
+            }
           }
+        } catch (error) {
+          console.error('❌ 画像アップロード失敗:', error)
+          throw new Error(`画像アップロードに失敗しました: ${error.message}`)
         }
       } else if (editForm.image) {
         // 既存の画像を維持
+        console.log('🇿 既存の画像を維持:', editForm.image)
         patch.image = editForm.image
       }
       
@@ -146,13 +159,18 @@ export default function ListView(){
         patch.memo = editForm.memo.trim()
       }
 
+      console.log('📝 最終パッチデータ:', patch)
+      console.log('🔄 updateProblemを実行中:', { editingId, patch })
+
       await realtimeStore.updateProblem(editingId, patch)
+      
+      console.log('✅ 更新成功!')
       setEditingId(null)
       setEditForm({})
       setEditImageFile(null)
       alert('保存しました')
     } catch (error) {
-      console.error('Failed to update problem:', error)
+      console.error('❌ saveEdit失敗:', error)
       const message = error instanceof Error ? error.message : String(error)
       alert('更新に失敗しました: ' + message)
     } finally {

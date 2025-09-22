@@ -195,12 +195,30 @@ export const RealtimeStoreProvider: React.FC<{ children: ReactNode }> = ({ child
     })
     
     console.log('📝 問題更新データ:', { id, updates: cleanUpdates })
+    console.log('🔍 現在のユーザー:', { uid: user.uid })
+    console.log('🔍 更新パス:', `users/${user.uid}/problems/${id}`)
     
-    const problemRef = doc(db, 'users', user.uid, 'problems', id)
-    await updateDoc(problemRef, {
-      ...cleanUpdates,
-      updatedAt: serverTimestamp(),
-    })
+    try {
+      const problemRef = doc(db, 'users', user.uid, 'problems', id)
+      console.log('🔍 Firestore参照:', problemRef.path)
+      
+      await updateDoc(problemRef, {
+        ...cleanUpdates,
+        updatedAt: serverTimestamp(),
+      })
+      
+      console.log('✅ 更新完了:', id)
+    } catch (error) {
+      console.error('❌ 更新失敗 - 詳細エラー:', {
+        error: error,
+        errorMessage: error.message,
+        errorCode: error.code,
+        id: id,
+        updates: cleanUpdates,
+        userUid: user.uid
+      })
+      throw error
+    }
   }
 
   const deleteProblem = async (id: string) => {
