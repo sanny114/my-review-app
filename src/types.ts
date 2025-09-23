@@ -3,6 +3,20 @@ export type User = { id: 'rin' | 'yui'; name: string }
 
 export type RatingCode = 'wrong' | 'doubt' | 'correct'
 
+// 問題作成用の型（IDは自動生成またはカスタム）
+export type CreateProblemData = {
+  id?: string // オプション: 指定されない場合は自動生成
+  userId: User['id']
+  subjectName: string
+  subjectFixed: boolean
+  text: string
+  image?: string
+  answer: string
+  tags: string[]
+  source?: string
+  memo?: string
+  archived?: boolean
+}
 
 export type Problem = {
 id: string

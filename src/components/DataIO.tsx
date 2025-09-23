@@ -55,7 +55,8 @@ export default function DataIO(){
               tags: problem.tags || [],
               source: problem.source || '',
               memo: problem.memo || '',
-              archived: problem.archived || false
+              archived: problem.archived || false,
+              image: problem.image // 画像フィールドを追加
             })
             successCount++
           } catch (error) {
@@ -179,7 +180,8 @@ export default function DataIO(){
               tags: tags,
               source: rowData.source || '',
               memo: rowData.memo || '',
-              archived: false
+              archived: false,
+              image: undefined // CSVインポートでは画像なし
             })
             
             successCount++
