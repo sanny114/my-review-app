@@ -163,10 +163,38 @@ export default function RegisterForm(){
           </div>
           <div>
             <label>科目</label>
-            <select className="input" value={state.subjectName} onChange={e=>setState({...state, subjectName: e.target.value})}>
-              {subjects.map(s=> <option key={s} value={s}>{s}</option>)}
-            </select>
-            <small className="muted">新しい科目は、このセレクトに直接入力して追加してください。</small>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <select 
+                className="input" 
+                value={subjects.includes(state.subjectName) ? state.subjectName : 'その他'} 
+                onChange={e => {
+                  if (e.target.value === 'その他') {
+                    setState({...state, subjectName: ''})
+                  } else {
+                    setState({...state, subjectName: e.target.value})
+                  }
+                }}
+                style={{ flex: '1' }}
+              >
+                {subjects.map(s=> <option key={s} value={s}>{s}</option>)}
+                <option value="その他">その他...</option>
+              </select>
+              {!subjects.includes(state.subjectName) && (
+                <input 
+                  className="input" 
+                  value={state.subjectName} 
+                  onChange={e => setState({...state, subjectName: e.target.value})}
+                  placeholder="新しい科目名"
+                  style={{ flex: '1' }}
+                />
+              )}
+            </div>
+            <small className="muted">
+              {subjects.includes(state.subjectName) || state.subjectName === '' 
+                ? '新しい科目を追加する場合は「その他...」を選択してください。' 
+                : `「${state.subjectName}」を新しい科目として登録します。`
+              }
+            </small>
           </div>
         </div>
 
