@@ -382,11 +382,17 @@ export default function ListView(){
                         onChange={e => setEditForm({...editForm, subjectName: e.target.value})}
                         style={{width: '55px', fontSize: '12px'}}
                       >
-                        <option value="漢字">漢字</option>
-                        <option value="算数">算数</option>
-                        <option value="国語">国語</option>
-                        <option value="理科">理科</option>
-                        <option value="社会">社会</option>
+                        <option value="">未分類</option>
+                        {/* 登録済みの科目を動的に表示 */}
+                        {Array.from(new Set(realtimeStore.problems.filter(p=>p.userId===userId).map(p=>p.subjectName))).sort().map(s => 
+                          <option key={s} value={s}>{s}</option>
+                        )}
+                        {/* よく使用される科目を追加（重複は自動除去される） */}
+                        {['漢字', '算数', '国語', '理科', '社会'].filter(s => 
+                          !Array.from(new Set(realtimeStore.problems.filter(p=>p.userId===userId).map(p=>p.subjectName))).includes(s)
+                        ).map(s => 
+                          <option key={s} value={s}>{s}</option>
+                        )}
                       </select>
                     ) : (
                       <div style={{fontSize: '12px'}}>{p.subjectName}</div>
