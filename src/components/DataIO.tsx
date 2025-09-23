@@ -47,7 +47,6 @@ export default function DataIO(){
         for (const problem of jsonData.problems) {
           try {
             await realtimeStore.addProblem({
-              id: undefined, // 自動生成IDを使用
               userId: problem.userId,
               subjectName: problem.subjectName || '未分類',
               subjectFixed: ['漢字', '算数'].includes(problem.subjectName),
@@ -172,7 +171,6 @@ export default function DataIO(){
             const tags = rowData.tags ? rowData.tags.split(';').map((t: string) => t.trim()).filter((t: string) => t) : []
 
             await realtimeStore.addProblem({
-              id: undefined, // 自動生成IDを使用
               userId: rowData.userId,
               subjectName: rowData.subjectName || '未分類',
               subjectFixed: ['漢字', '算数'].includes(rowData.subjectName),
